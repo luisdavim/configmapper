@@ -1,8 +1,19 @@
 # ConfigMapper
 
-ConfigMapper is meant to be used as a sidecar and map local files to `ConfigMaps` (or `Secrets`).
-It can watch files in the local filesystem and when they change update a `ConfigMap` (or `Secret`).
+ConfigMapper is meant to be used as a sidecar in a Kubernetes `Pod` to map local files to `ConfigMaps` (or `Secrets`).
+It can watch files in the local filesystem and when they change, create or update a `ConfigMap` (or `Secret`).
 It can also watch `ConfigMaps` (or `Secrets`) with a specific label selector and create or update files in the local filesystem.
+
+## Features
+
+- Create or update ConfigMaps or Secrets from local files
+  - Watch the local filesystem to keep ConfigMaps and Secrets up-to-date
+- Extract files from ConfigMaps and Secrets
+- Update or delete local files when the ConfigMap or Secret changes
+  - Watch ConfigMaps and Secrets to keep local files up-to-date
+- Filter based on labels
+
+## Configuration
 
 The tool can be configured using a `yaml` file nameed `configmapper.yaml`:
 
@@ -25,10 +36,20 @@ watcher:
   defaultPath: "/tmp"
 ```
 
+The default path is the local filesystem path where files will be created from the observed `ConfigMaps` and `Secrets`, this can be overridden from each `ConfigMap` (or `Secret`) through an annotation, you can also use annotations to tell the tool to ignore specific resources or to ignore deletes, to kepp the generated file after the resource was deleted:
+
+```yaml
+metadata:
+  annotations:
+    configmapper/target-directory: "/path/to/target/directory"
+    configmapper/skip: "false"
+    configmapper/ignore-delete: "false"
+```
+
 The watcher config can also be set, using environment variables, for example, `WATCHER_NAMESPACES` can be used to set the list of namespaces to watch.
 Environment variables are automatically mapped to the comandline flags and named after the config file paths.
 
-Usage:
+## Usage
 
 ```console
 $ configmapper -h

@@ -18,11 +18,13 @@ import (
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/secret"
 	"github.com/luisdavim/configmapper/pkg/utils"
 
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -81,6 +83,16 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 
 	if cfg.RequiredLabel != "" {
 		filters = append(filters, filter.ByLabel(cfg.RequiredLabel))
+	}
+
+	if cfg.LabelSelector != "" {
+		selector, err := labels.Parse(cfg.LabelSelector)
+		if err != nil {
+			return fmt.Errorf("invalid label selector: %w", err)
+		}
+		filters = append(filters, predicate.NewPredicateFuncs(func(o client.Object) bool {
+			return selector.Matches(labels.Set(o.GetLabels()))
+		}))
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOpts)

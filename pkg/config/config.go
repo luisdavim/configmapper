@@ -17,6 +17,7 @@ type Watcher struct {
 	ConfigMaps    bool   `mapstructure:"configMaps,omitempty"`
 	Secrets       bool   `mapstructure:"secrets,omitempty"`
 	Namespaces    string `mapstructure:"namespaces,omitempty"`
-	RequiredLabel string `mapstructure:"labelSelector,omitempty"`
+	RequiredLabel string `mapstructure:"requiredLabel,omitempty"`
+	LabelSelector string `mapstructure:"labelSelector,omitempty"`
 	DefaultPath   string `mapstructure:"defaultPath,omitempty"`
 }

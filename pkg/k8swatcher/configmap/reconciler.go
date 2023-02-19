@@ -89,7 +89,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	for file, data := range configMap.Data {
 		log.WithValues("file", file, "path", baseDir).Info("writting file")
-		os.WriteFile(filepath.Join(baseDir, file), []byte(data), 0o644)
+		if err := os.WriteFile(filepath.Join(baseDir, file), []byte(data), 0o644); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{RequeueAfter: time.Hour}, nil

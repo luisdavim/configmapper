@@ -1,0 +1,16 @@
+# fileMap maps file paths to k8s ConfigMaps or Secrets
+fileMap:
+  "/tmp/config.yaml":
+    type: ConfigMap
+    namespace: foo
+  "/tmp/secrets.yaml":
+    type: Secret
+    namespace: foo
+
+# watcher can watch ConfigMap and Secrets to create files in the Pod's FS
+watcher:
+  configMaps: true
+  secrets: true
+  labelSelector: "app=foo"
+  namespaces: foo
+  defaultPath: "/tmp"

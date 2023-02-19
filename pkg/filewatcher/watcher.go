@@ -85,13 +85,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 				if err := w.fw.Add(event.Name); err != nil {
 					w.log.Err(err).Msg("updating file watch")
 				}
-				err := w.updateConfig(event.Name)
+				err := w.update(event.Name)
 				w.log.Err(err).Msg("updating config")
 				continue
 			}
 			// also allow normal files to be modified and reloaded.
 			if event.Has(fsnotify.Write) {
-				err := w.updateConfig(event.Name)
+				err := w.update(event.Name)
 				w.log.Err(err).Msg("updating config")
 				continue
 			}
@@ -103,32 +103,77 @@ func (w *Watcher) Start(ctx context.Context) error {
 	}
 }
 
-func (w *Watcher) updateConfig(name string) error {
-	cfg, ok := w.config[name]
+func getFilesFromPath(path string) ([]string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if !info.IsDir() {
+		return []string{path}, nil
+	}
+
+	var files []string
+	err = filepath.Walk(path, func(p string, i os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !i.IsDir() {
+			files = append(files, p)
+		}
+		return nil
+	})
+	if err != nil {
+		return files, err
+	}
+
+	return files, nil
+}
+
+func getData(path string) (map[string]string, error) {
+	data := make(map[string]string)
+	files, err := getFilesFromPath(path)
+	if err != nil {
+		return data, err
+	}
+
+	for _, fileName := range files {
+		b, err := os.ReadFile(fileName)
+		if err != nil {
+			return data, err
+		}
+		data[filepath.Base(fileName)] = string(b)
+	}
+
+	return data, nil
+}
+
+func (w *Watcher) update(path string) error {
+	cfg, ok := w.config[path]
 	if !ok {
 		var found bool
 		for n := range w.config {
-			if strings.HasPrefix(name, n) {
+			if strings.HasPrefix(path, n) {
 				cfg = w.config[n]
+				path = n
 				found = true
 				break
 			}
 		}
 		if !found {
-			return fmt.Errorf("config for %s not found", name)
+			return fmt.Errorf("config for %s not found", path)
 		}
 	}
-	data, err := os.ReadFile(name)
+
+	data, err := getData(path)
 	if err != nil {
 		return err
 	}
+
 	if strings.EqualFold(cfg.ResourceType, "secret") {
 		obj := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: cfg.Name, Namespace: cfg.Namespace}}
 		op, err := controllerutil.CreateOrUpdate(context.TODO(), w.k8s, obj, func() error {
-			if obj.Data == nil {
-				obj.Data = make(map[string][]byte)
-			}
-			obj.Data[filepath.Base(name)] = data
+			obj.StringData = data
 			return nil
 		})
 
@@ -138,13 +183,9 @@ func (w *Watcher) updateConfig(name string) error {
 
 	obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: cfg.Name, Namespace: cfg.Namespace}}
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), w.k8s, obj, func() error {
-		if obj.Data == nil {
-			obj.Data = make(map[string]string)
-		}
-		obj.Data[filepath.Base(name)] = string(data)
+		obj.Data = data
 		return nil
 	})
 	w.log.Err(err).Str("operation", string(op)).Msgf("ConfigMap: %s/%s", cfg.Namespace, cfg.Name)
-
 	return err
 }

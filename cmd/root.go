@@ -73,7 +73,7 @@ func New(cfg *config.Config) *cobra.Command {
 	cmd.Flags().StringP("label-selector", "l", "", "Label selector for configMaps and secrets")
 	mustBindPFlag("watcher.labelSelector", cmd.Flags().Lookup("label-selector"))
 
-	cmd.Flags().StringP("reuired-label", "l", "", "Required label for configMaps and secrets")
+	cmd.Flags().StringP("reuired-label", "r", "", "Required label for configMaps and secrets")
 	mustBindPFlag("watcher.requiredLabel", cmd.Flags().Lookup("reuired-label"))
 
 	return cmd

@@ -98,7 +98,8 @@ deps: ## Fetch dependencies
 	$(GOCMD) mod tidy
 
 update-deps: ## Update depdendencies
-	$(GOCMD) get -u
+	# $(GOCMD) get -u
+	awk '/require \(/,/\)/ {x = ($$0 !~ /(require|\)|.*indirect)/) ? $$0 : ""; split(x,a," "); print a[1]}' go.mod | sed '/^$$/d' | xargs -L1 $(GOCMD) get -u
 	$(GOCMD) mod tidy
 
 vendor: deps ## Copy of all packages needed to support builds and tests in the vendor directory

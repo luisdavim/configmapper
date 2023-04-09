@@ -47,7 +47,7 @@ func predicates(ps []predicate.Predicate) predicate.Predicate {
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=configMaps/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := ctrl.Log.WithName("controller").WithValues("configMap", req.NamespacedName)
+	log := ctrl.Log.WithName("configMapController").WithValues("configMap", req.NamespacedName)
 
 	configMap := &corev1.ConfigMap{}
 	if err := r.Get(ctx, req.NamespacedName, configMap); err != nil {
@@ -59,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(configMap, consts.FinalizerName) {
 			if err := r.cleanup(configMap); err != nil {
-				log.Error(err, "failed to cleanup checks for configMap")
+				log.Error(err, "failed to cleanup")
 				return ctrl.Result{}, err
 			}
 		}

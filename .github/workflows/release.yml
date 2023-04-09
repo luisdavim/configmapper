@@ -1,9 +1,15 @@
 name: Release Packages
 
 on:
-  release:
-    types:
-      - published
+  workflow_run:
+    workflows: ["goreleaser"]
+    types: [completed]
+  # When you use the repository's GITHUB_TOKEN to perform tasks on behalf of the GitHub Actions app,
+  # events triggered by the GITHUB_TOKEN will not create a new workflow run.
+  # This prevents you from accidentally creating recursive workflow runs.
+  # release:
+  #   types:
+  #     - published
 
 env:
   REGISTRY: ghcr.io

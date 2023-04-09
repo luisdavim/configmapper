@@ -47,7 +47,7 @@ func predicates(ps []predicate.Predicate) predicate.Predicate {
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=secrets/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := ctrl.Log.WithName("controller").WithValues("secret", req.NamespacedName)
+	log := ctrl.Log.WithName("secretController").WithValues("secret", req.NamespacedName)
 
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
@@ -59,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(secret, consts.FinalizerName) {
 			if err := r.cleanup(secret); err != nil {
-				log.Error(err, "failed to cleanup checks for secret")
+				log.Error(err, "failed to cleanup")
 				return ctrl.Result{}, err
 			}
 		}

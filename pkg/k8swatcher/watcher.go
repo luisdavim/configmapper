@@ -1,5 +1,4 @@
-// configMapwatcher is a kubernetes controller that watches ConfigMap resources
-// and configures several checks for each observed configMap.
+// configMapwatcher is a kubernetes controller that watches ConfigMap and Secret resources
 package k8swatcher
 
 import (

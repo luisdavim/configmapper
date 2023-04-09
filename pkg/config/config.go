@@ -1,7 +1,10 @@
 package config
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 type Config struct {
-	FileMap FileMap `mapstructure:"fileMap.omitempty"`
+	URLMap  URLMap  `mapstructure:"urlMap,omitempty"`
+	FileMap FileMap `mapstructure:"fileMap,omitempty"`
 	Watcher Watcher `mapstructure:"watcher,omitempty"`
 }
 
@@ -11,6 +14,14 @@ type FileMapping struct {
 	ResourceType string `mapstructure:"type,omitempty"`
 	Namespace    string `mapstructure:"namespace,omitempty"`
 	Name         string `mapstructure:"name,omitempty"`
+}
+
+type URLMap map[string]URLMapping
+
+type URLMapping struct {
+	FileMapping `mapstructure:",squash"`
+	Interval    metav1.Duration `mapstructure:"interval"`
+	Key         string
 }
 
 type Watcher struct {

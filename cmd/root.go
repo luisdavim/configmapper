@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/luisdavim/configmapper/pkg/config"
+	"github.com/luisdavim/configmapper/pkg/downloader"
 	"github.com/luisdavim/configmapper/pkg/filewatcher"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher"
 )
@@ -39,6 +40,10 @@ func New(cfg *config.Config) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			dnlr, err := downloader.New(cfg.URLMap)
+			if err != nil {
+				return err
+			}
 			signals := make(chan os.Signal, 1)
 			signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -46,6 +51,9 @@ func New(cfg *config.Config) *cobra.Command {
 				if err = fw.Start(ctx); err != nil {
 					signals <- syscall.SIGABRT
 				}
+			}()
+			go func() {
+				dnlr.Start(ctx)
 			}()
 			go func() {
 				if err := k8swatcher.Start(ctx, cfg.Watcher); err != nil {
@@ -132,12 +140,13 @@ func initConfig(cfgFile string) (config.Config, error) {
 	err := viper.ReadInConfig()
 	// TODO: should be errors.Is
 	// see: https://github.com/spf13/viper/issues/1139
-	if errors.As(err, new(viper.ConfigFileNotFoundError)) {
+	var actual viper.ConfigFileNotFoundError
+	if errors.As(err, &actual) {
 		err = nil
 	}
 	if err == nil {
 		log.Println("Using config file:", viper.ConfigFileUsed())
-		err = viper.Unmarshal(&cfg)
+		err = viper.Unmarshal(&cfg, config.DecodeHooks())
 	}
 
 	return cfg, err

@@ -9,11 +9,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	konfig "sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/luisdavim/configmapper/pkg/config"
 	"github.com/luisdavim/configmapper/pkg/utils"
@@ -110,6 +107,7 @@ func getFilesFromPath(path string) ([]string, error) {
 	}
 
 	if !info.IsDir() {
+		// is path is a file, return it
 		return []string{path}, nil
 	}
 
@@ -118,9 +116,11 @@ func getFilesFromPath(path string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !i.IsDir() {
-			files = append(files, p)
+		if i.IsDir() {
+			// don't recurse into sub-folders
+			return filepath.SkipDir
 		}
+		files = append(files, p)
 		return nil
 	})
 	if err != nil {
@@ -152,6 +152,7 @@ func (w *Watcher) update(path string) error {
 	cfg, ok := w.config[path]
 	if !ok {
 		var found bool
+		// the path may point to a file in a watched folder
 		for n := range w.config {
 			if strings.HasPrefix(path, n) {
 				cfg = w.config[n]
@@ -170,22 +171,7 @@ func (w *Watcher) update(path string) error {
 		return err
 	}
 
-	if strings.EqualFold(cfg.ResourceType, "secret") {
-		obj := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: cfg.Name, Namespace: cfg.Namespace}}
-		op, err := controllerutil.CreateOrUpdate(context.TODO(), w.k8s, obj, func() error {
-			obj.StringData = data
-			return nil
-		})
-
-		w.log.Err(err).Str("operation", string(op)).Msgf("Secret: %s/%s", cfg.Namespace, cfg.Name)
-		return err
-	}
-
-	obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: cfg.Name, Namespace: cfg.Namespace}}
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), w.k8s, obj, func() error {
-		obj.Data = data
-		return nil
-	})
-	w.log.Err(err).Str("operation", string(op)).Msgf("ConfigMap: %s/%s", cfg.Namespace, cfg.Name)
+	op, err := utils.CreateOrUpdate(cfg.Name, cfg.Namespace, cfg.ResourceType, data, w.k8s)
+	w.log.Err(err).Str("operation", string(op)).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
 	return err
 }

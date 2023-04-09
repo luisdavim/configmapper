@@ -2,9 +2,24 @@
 fileMap:
   "/tmp/config.yaml":
     type: ConfigMap
+    name: my-cm
     namespace: foo
   "/tmp/secrets.yaml":
     type: Secret
+    name: my-secret
+    namespace: foo
+
+# urlMap maps urls to k8s ConfigMaps or Secrets
+urlMap:
+  "https://fs.example.com/config":
+    type: ConfigMap
+    name: my-other-cm
+    key: config.json
+    namespace: foo
+  "https://fs.example.com/secret":
+    type: Secret
+    name: my-other-secret
+    key: secret.json
     namespace: foo
 
 # watcher can watch ConfigMap and Secrets to create files in the Pod's FS

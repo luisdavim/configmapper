@@ -8,6 +8,8 @@ It can also watch `ConfigMaps` (or `Secrets`) with a specific label selector and
 
 - Create or update ConfigMaps or Secrets from local files
   - Watch the local filesystem to keep ConfigMaps and Secrets up-to-date
+- Create or update ConfigMaps or Secrets from URLs
+  - Poll URLs and store the response in a ConfigMap or Secret
 - Extract files from ConfigMaps and Secrets
 - Update or delete local files when the ConfigMap or Secret changes
   - Watch ConfigMaps and Secrets to keep local files up-to-date
@@ -22,9 +24,24 @@ The tool can be configured using a `yaml` file nameed `configmapper.yaml`:
 fileMap:
   "/tmp/config.yaml":
     type: ConfigMap
+    name: my-cm
     namespace: foo
   "/tmp/secrets.yaml":
     type: Secret
+    name: my-secret
+    namespace: foo
+
+# urlMap maps urls to k8s ConfigMaps or Secrets
+urlMap:
+  "https://fs.example.com/config":
+    type: ConfigMap
+    name: my-other-cm
+    key: config.json
+    namespace: foo
+  "https://fs.example.com/secret":
+    type: Secret
+    name: my-other-secret
+    key: secret.json
     namespace: foo
 
 # watcher can watch ConfigMap and Secrets to create files in the Pod's FS

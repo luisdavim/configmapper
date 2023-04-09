@@ -1,13 +1,21 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const inClusterNamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 
-// getInClusterNamespace returns the pod's namespace
+// GetInClusterNamespace returns the pod's namespace
 func GetInClusterNamespace() (string, error) {
 	if namespace := os.Getenv("POD_NAMESPACE"); namespace != "" {
 		return namespace, nil
@@ -27,4 +35,27 @@ func GetInClusterNamespace() (string, error) {
 		return "", fmt.Errorf("error reading namespace file: %w", err)
 	}
 	return string(namespace), nil
+}
+
+func CreateOrUpdate(name, namespace, kind string, data map[string]string, c client.Client) (ctrlutil.OperationResult, error) {
+	if strings.EqualFold(kind, "secret") {
+		obj := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+		op, err := ctrlutil.CreateOrUpdate(context.TODO(), c, obj, func() error {
+			obj.StringData = data
+			return nil
+		})
+
+		return op, err
+	}
+
+	if !strings.EqualFold(kind, "configmap") {
+		return ctrlutil.OperationResultNone, fmt.Errorf("kind must be Secret or ConfigMap")
+	}
+
+	obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+	op, err := ctrlutil.CreateOrUpdate(context.TODO(), c, obj, func() error {
+		obj.Data = data
+		return nil
+	})
+	return op, err
 }

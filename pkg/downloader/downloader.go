@@ -88,44 +88,46 @@ func (d *Downloader) Start(ctx context.Context) {
 func (d *Downloader) Stop() {
 	d.Lock()
 	defer d.Unlock()
-	for name := range d.config {
-		if stopCh, ok := d.stop[name]; ok && stopCh != nil {
+	for url := range d.config {
+		if stopCh, ok := d.stop[url]; ok && stopCh != nil {
 			close(stopCh)
 		}
-		delete(d.stop, name)
+		delete(d.stop, url)
 	}
 }
 
 func (d *Downloader) schedule(ctx context.Context, url string) {
-	d.log.Info().Str("name", url).Msg("starting")
+	d.log.Info().Str("url", url).Msg("starting")
 	go func() {
-		d.download(url)
+		err := d.download(url)
+		d.log.Err(err).Str("url", url).Msgf("downloading")
 		ticker := time.NewTicker(d.config[url].Interval.Duration)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				d.download(url)
+				err := d.download(url)
+				d.log.Err(err).Str("url", url).Msgf("downloading")
 			case <-ctx.Done():
-				d.log.Info().Str("name", url).Msg("context canceled, stopping")
+				d.log.Info().Str("url", url).Msg("context canceled, stopping")
 				return
 			case <-d.stop[url]:
-				d.log.Info().Str("name", url).Msg("got quit signal, stopping")
+				d.log.Info().Str("url", url).Msg("got quit signal, stopping")
 				return
 			}
 		}
 	}()
 }
 
-func (d *Downloader) download(path string) error {
+func (d *Downloader) download(url string) error {
 	d.RLock()
-	cfg, ok := d.config[path]
+	cfg, ok := d.config[url]
 	d.RUnlock()
 	if !ok {
-		return fmt.Errorf("config for %s not found", path)
+		return fmt.Errorf("config for %s not found", url)
 	}
 
-	body, err := d.get(path)
+	body, err := d.get(url)
 	if err != nil {
 		return err
 	}

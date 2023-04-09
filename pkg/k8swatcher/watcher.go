@@ -76,7 +76,7 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	}
 
 	var filters []predicate.Predicate
-	if len(nss) > 0 {
+	if len(nss) > 0 && cfg.Namespaces != "" {
 		filters = append(filters, filter.ByNamespace(nss))
 	}
 

@@ -61,6 +61,7 @@ func New(cfg *config.Config) *cobra.Command {
 				}
 			}()
 			<-signals
+			dnlr.Stop()
 			cancel()
 			return err
 		},

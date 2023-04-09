@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/luisdavim/configmapper/pkg/config"
 	"github.com/luisdavim/configmapper/pkg/utils"
 )
+
+const DefaultKey = "config"
 
 type Downloader struct {
 	config config.URLMap
@@ -47,20 +50,22 @@ func New(cfg config.URLMap) (*Downloader, error) {
 
 	curNS, _ := utils.GetInClusterNamespace()
 	for u, c := range cfg {
-		if _, err := url.Parse(u); err != nil {
-			d.log.Err(err).Msg("invalid URL")
-			continue
-		}
 		if c.Name == "" {
-			d.log.Error().Msgf("no resource name for %s", u)
-			continue
-		}
-		if c.Key == "" {
-			c.Key = "config"
+			return nil, fmt.Errorf("no resource name for %s", u)
 		}
 		if c.Namespace == "" {
 			c.Namespace = curNS
 			d.config[u] = c
+		}
+		pu, err := url.Parse(u)
+		if err != nil {
+			return nil, err
+		}
+		if c.Key == "" {
+			c.Key = filepath.Base(pu.Path)
+			if c.Key == "." || c.Key == "/" {
+				c.Key = DefaultKey
+			}
 		}
 	}
 
@@ -68,6 +73,8 @@ func New(cfg config.URLMap) (*Downloader, error) {
 }
 
 func (d *Downloader) Start(ctx context.Context) {
+	d.Lock()
+	defer d.Unlock()
 	for url := range d.config {
 		if _, ok := d.stop[url]; ok {
 			// already running
@@ -78,19 +85,19 @@ func (d *Downloader) Start(ctx context.Context) {
 	}
 }
 
-func (r *Downloader) Stop() {
-	r.Lock()
-	defer r.Unlock()
-	for name := range r.config {
-		if stopCh, ok := r.stop[name]; ok && stopCh != nil {
+func (d *Downloader) Stop() {
+	d.Lock()
+	defer d.Unlock()
+	for name := range d.config {
+		if stopCh, ok := d.stop[name]; ok && stopCh != nil {
 			close(stopCh)
 		}
-		delete(r.stop, name)
+		delete(d.stop, name)
 	}
 }
 
 func (d *Downloader) schedule(ctx context.Context, url string) {
-	d.log.Info().Str("name", url).Msg("starting config")
+	d.log.Info().Str("name", url).Msg("starting")
 	go func() {
 		d.download(url)
 		ticker := time.NewTicker(d.config[url].Interval.Duration)
@@ -100,23 +107,25 @@ func (d *Downloader) schedule(ctx context.Context, url string) {
 			case <-ticker.C:
 				d.download(url)
 			case <-ctx.Done():
-				d.log.Info().Str("name", url).Msg("stopping config")
+				d.log.Info().Str("name", url).Msg("context canceled, stopping")
 				return
 			case <-d.stop[url]:
-				d.log.Info().Str("name", url).Msg("got quit signal, stopping config")
+				d.log.Info().Str("name", url).Msg("got quit signal, stopping")
 				return
 			}
 		}
 	}()
 }
 
-func (w *Downloader) download(path string) error {
-	cfg, ok := w.config[path]
+func (d *Downloader) download(path string) error {
+	d.RLock()
+	cfg, ok := d.config[path]
+	d.RUnlock()
 	if !ok {
 		return fmt.Errorf("config for %s not found", path)
 	}
 
-	body, err := w.get(path)
+	body, err := d.get(path)
 	if err != nil {
 		return err
 	}
@@ -125,8 +134,8 @@ func (w *Downloader) download(path string) error {
 		cfg.Key: body,
 	}
 
-	op, err := utils.CreateOrUpdate(cfg.Name, cfg.Namespace, cfg.ResourceType, data, w.k8s)
-	w.log.Err(err).Str("operation", string(op)).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
+	op, err := utils.CreateOrUpdate(cfg.Name, cfg.Namespace, cfg.ResourceType, data, d.k8s)
+	d.log.Err(err).Str("operation", string(op)).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
 	return err
 }
 

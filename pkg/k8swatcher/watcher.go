@@ -22,7 +22,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -67,16 +66,12 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 
 	nss := strings.Split(cfg.Namespaces, ",")
 
-	if len(nss) == 1 {
-		ctrlOpts.Namespace = nss[0]
-	}
-
-	if len(nss) > 1 {
-		ctrlOpts.NewCache = cache.MultiNamespacedCacheBuilder(nss)
+	if len(nss) >= 1 {
+		ctrlOpts.Cache.Namespaces = nss
 	}
 
 	var filters []predicate.Predicate
-	if len(nss) > 0 && cfg.Namespaces != "" {
+	if cfg.Namespaces != "" && len(nss) > 0 {
 		filters = append(filters, filter.ByNamespace(nss))
 	}
 

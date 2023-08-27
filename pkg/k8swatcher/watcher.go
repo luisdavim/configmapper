@@ -53,7 +53,33 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 		Development: false,
 	})))
 
+	// limit the tool to the local namespace by default
+	if cfg.Namespaces == "" {
+		cfg.Namespaces, _ = utils.GetInClusterNamespace()
+	}
+
 	nss := strings.Split(cfg.Namespaces, ",")
+
+	var filters []predicate.Predicate
+	if cfg.Namespaces != "" && len(nss) > 0 {
+		filters = append(filters, filter.ByNamespace(nss))
+	}
+
+	if cfg.RequiredLabel != "" {
+		filters = append(filters, filter.ByLabel(cfg.RequiredLabel))
+	}
+
+	var selector labels.Selector
+	if cfg.LabelSelector != "" {
+		var err error
+		selector, err = labels.Parse(cfg.LabelSelector)
+		if err != nil {
+			return fmt.Errorf("invalid label selector: %w", err)
+		}
+		filters = append(filters, predicate.NewPredicateFuncs(func(o client.Object) bool {
+			return selector.Matches(labels.Set(o.GetLabels()))
+		}))
+	}
 
 	ctrlOpts := ctrl.Options{
 		Scheme: scheme,
@@ -72,32 +98,10 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 				}
 			}
 
+			opts.DefaultLabelSelector = selector
+
 			return cache.New(config, opts)
 		},
-	}
-
-	// limit the tool to the local namespace by default
-	if cfg.Namespaces == "" {
-		cfg.Namespaces, _ = utils.GetInClusterNamespace()
-	}
-
-	var filters []predicate.Predicate
-	if cfg.Namespaces != "" && len(nss) > 0 {
-		filters = append(filters, filter.ByNamespace(nss))
-	}
-
-	if cfg.RequiredLabel != "" {
-		filters = append(filters, filter.ByLabel(cfg.RequiredLabel))
-	}
-
-	if cfg.LabelSelector != "" {
-		selector, err := labels.Parse(cfg.LabelSelector)
-		if err != nil {
-			return fmt.Errorf("invalid label selector: %w", err)
-		}
-		filters = append(filters, predicate.NewPredicateFuncs(func(o client.Object) bool {
-			return selector.Matches(labels.Set(o.GetLabels()))
-		}))
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOpts)

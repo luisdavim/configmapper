@@ -10,6 +10,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 
 	"github.com/luisdavim/configmapper/pkg/config"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/configmap"
@@ -22,9 +23,11 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metrcisserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	// +kubebuilder:scaffold:imports
 )
@@ -50,24 +53,32 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 		Development: false,
 	})))
 
+	nss := strings.Split(cfg.Namespaces, ",")
+
 	ctrlOpts := ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     ":8080",
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metrcisserver.Options{
+			BindAddress: ":8080",
+		},
 		HealthProbeBindAddress: ":8081",
 		LeaderElection:         false,
 		LeaderElectionID:       "configmapper",
+		NewCache: func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			if cfg.Namespaces != "" && len(nss) > 0 {
+				setupLog.Info("filtered cache", "Namespaces", cfg.Namespaces)
+				opts.DefaultNamespaces = map[string]cache.Config{}
+				for _, ns := range nss {
+					opts.DefaultNamespaces[ns] = cache.Config{}
+				}
+			}
+
+			return cache.New(config, opts)
+		},
 	}
 
 	// limit the tool to the local namespace by default
 	if cfg.Namespaces == "" {
 		cfg.Namespaces, _ = utils.GetInClusterNamespace()
-	}
-
-	nss := strings.Split(cfg.Namespaces, ",")
-
-	if len(nss) >= 1 {
-		ctrlOpts.Cache.Namespaces = nss
 	}
 
 	var filters []predicate.Predicate

@@ -10,7 +10,6 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
 
 	"github.com/luisdavim/configmapper/pkg/config"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/configmap"
@@ -59,28 +58,6 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	}
 
 	nss := strings.Split(cfg.Namespaces, ",")
-
-	var filters []predicate.Predicate
-	if cfg.Namespaces != "" && len(nss) > 0 {
-		filters = append(filters, filter.ByNamespace(nss))
-	}
-
-	if cfg.RequiredLabel != "" {
-		filters = append(filters, filter.ByLabel(cfg.RequiredLabel))
-	}
-
-	var selector labels.Selector
-	if cfg.LabelSelector != "" {
-		var err error
-		selector, err = labels.Parse(cfg.LabelSelector)
-		if err != nil {
-			return fmt.Errorf("invalid label selector: %w", err)
-		}
-		filters = append(filters, predicate.NewPredicateFuncs(func(o client.Object) bool {
-			return selector.Matches(labels.Set(o.GetLabels()))
-		}))
-	}
-
 	ctrlOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metrcisserver.Options{
@@ -89,19 +66,32 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 		HealthProbeBindAddress: ":8081",
 		LeaderElection:         false,
 		LeaderElectionID:       "configmapper",
-		NewCache: func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
-			if cfg.Namespaces != "" && len(nss) > 0 {
-				setupLog.Info("filtered cache", "Namespaces", cfg.Namespaces)
-				opts.DefaultNamespaces = map[string]cache.Config{}
-				for _, ns := range nss {
-					opts.DefaultNamespaces[ns] = cache.Config{}
-				}
-			}
+	}
 
-			opts.DefaultLabelSelector = selector
+	var filters []predicate.Predicate
+	if cfg.Namespaces != "" && len(nss) > 0 {
+		filters = append(filters, filter.ByNamespace(nss))
+		if ctrlOpts.Cache.DefaultNamespaces == nil {
+			ctrlOpts.Cache.DefaultNamespaces = map[string]cache.Config{}
+		}
+		for _, ns := range nss {
+			ctrlOpts.Cache.DefaultNamespaces[ns] = cache.Config{}
+		}
+	}
 
-			return cache.New(config, opts)
-		},
+	if cfg.RequiredLabel != "" {
+		filters = append(filters, filter.ByLabel(cfg.RequiredLabel))
+	}
+
+	if cfg.LabelSelector != "" {
+		selector, err := labels.Parse(cfg.LabelSelector)
+		if err != nil {
+			return fmt.Errorf("invalid label selector: %w", err)
+		}
+		filters = append(filters, predicate.NewPredicateFuncs(func(o client.Object) bool {
+			return selector.Matches(labels.Set(o.GetLabels()))
+		}))
+		ctrlOpts.Cache.DefaultLabelSelector = selector
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOpts)

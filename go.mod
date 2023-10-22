@@ -3,7 +3,7 @@ module github.com/luisdavim/configmapper
 go 1.20
 
 require (
-	github.com/fsnotify/fsnotify v1.6.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/rs/zerolog v1.31.0

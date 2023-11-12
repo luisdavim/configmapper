@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/hashicorp/go-retryablehttp v0.7.4
+	github.com/hashicorp/go-retryablehttp v0.7.5
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.8.0

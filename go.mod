@@ -14,8 +14,8 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
-	k8s.io/client-go v0.29.3
-	sigs.k8s.io/controller-runtime v0.17.3
+	k8s.io/client-go v0.30.1
+	sigs.k8s.io/controller-runtime v0.18.3
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/evanphx/json-patch/v5 v5.8.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
@@ -79,8 +79,7 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.29.2 // indirect
-	k8s.io/component-base v0.29.2 // indirect
+	k8s.io/apiextensions-apiserver v0.30.1 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect

@@ -4,7 +4,7 @@ go 1.21
 toolchain go1.22.5
 
 require (
-	github.com/fsnotify/fsnotify v1.7.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/rs/zerolog v1.33.0

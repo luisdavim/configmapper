@@ -19,7 +19,10 @@ import (
 	"github.com/luisdavim/configmapper/pkg/utils"
 )
 
-const DefaultKey = "config"
+const (
+	DefaultKey      = "config"
+	DefaultInterval = time.Minute
+)
 
 type Downloader struct {
 	config config.URLMap
@@ -66,6 +69,9 @@ func New(cfg config.URLMap) (*Downloader, error) {
 			if c.Key == "." || c.Key == "/" {
 				c.Key = DefaultKey
 			}
+		}
+		if c.Interval.Duration == 0 {
+			c.Interval.Duration = DefaultInterval
 		}
 	}
 

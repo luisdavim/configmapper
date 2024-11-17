@@ -38,6 +38,7 @@ urlMap:
     name: my-other-cm
     key: config.json
     namespace: foo
+    interval: 5m # how frequently to download, defaults to 60s
   "https://fs.example.com/secret":
     type: Secret
     name: my-other-secret

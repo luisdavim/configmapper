@@ -1,6 +1,8 @@
 module github.com/luisdavim/configmapper
 
 go 1.23
+toolchain go1.24.1
+
 require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-viper/mapstructure/v2 v2.2.1
@@ -11,7 +13,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	k8s.io/api v0.32.2
-	k8s.io/apimachinery v0.32.2
+	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.2
 	sigs.k8s.io/controller-runtime v0.20.3
 )

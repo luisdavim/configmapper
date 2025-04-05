@@ -105,7 +105,7 @@ Too use the process reloading functionality, the Pod needs to be configured to [
 
 When mapping a file that is mounted from ConfigMap or Secret, the changes won't take effect immediately.
 
-This is because the projected values of ConfigMaps and Secrets are not updated exactly when the underlying object changes, but instead they're [updated periodically](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#mounted-configmaps-are-updated-automatically) according to the `syncFrequency` argument to the [kubelet config](https://kubernetes.io/docs/reference/config-api/kubelet-config.v1beta1/). This defaults to 1 minute.
+This is because the projected values of ConfigMaps and Secrets are not updated exactly when the underlying object changes, but instead they're [updated periodically](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#mounted-configmaps-are-updated-automatically) according to the `syncFrequency` argument to the [kubelet config](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/). This defaults to 1 minute.
 
 ### Files mounted via `subPath` are never updated
 

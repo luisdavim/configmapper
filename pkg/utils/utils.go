@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 
+	ps "github.com/shirou/gopsutil/v4/process"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,4 +60,39 @@ func CreateOrUpdate(name, namespace, kind string, data map[string]string, c clie
 		return nil
 	})
 	return op, err
+}
+
+func FindPID(process string) (int, error) {
+	processes, err := ps.Processes()
+	if err != nil {
+		return -1, fmt.Errorf("failed to list processes: %v", err)
+	}
+
+	for _, p := range processes {
+		pname, err := p.Name()
+		if err != nil {
+			return -1, err
+		}
+		if pname == process {
+			// log.Printf("found executable %s (pid: %d)\n", pname, p.Pid
+			return int(p.Pid), nil
+		}
+	}
+
+	return -1, fmt.Errorf("no process matching %s found", process)
+}
+
+func ReloadProcess(process string, signal syscall.Signal) error {
+	pid, err := FindPID(process)
+	if err != nil {
+		return err
+	}
+
+	err = syscall.Kill(pid, signal)
+	if err != nil {
+		return fmt.Errorf("could not send signal: %v", err)
+	}
+
+	// log.Printf("signal %s sent to %s (pid: %d)", signal, process, pid)
+	return nil
 }

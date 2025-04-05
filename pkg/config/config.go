@@ -8,9 +8,24 @@ type Config struct {
 	Watcher Watcher `mapstructure:"watcher,omitempty"`
 }
 
+type SignalMap map[string]SignalMapping
+
+type SignalMapping struct {
+	ProcessName string `mapstructure:"processName,omitempty"`
+	Signal      string `mapstructure:"signal,omitempty"`
+}
+
 type FileMap map[string]FileMapping
 
 type FileMapping struct {
+	// ResourceMapping can map a file to a Kubernetes Secret or ConfigMap
+	// when the file changes the Kubernetes resource is updated with the file contentes
+	ResourceMapping `mapstructure:",squash"`
+	// SignalMapping can map a file to a process, when the file changes the process is sent the specied signal
+	SignalMapping `mapstructure:",squash"`
+}
+
+type ResourceMapping struct {
 	ResourceType string `mapstructure:"type,omitempty"`
 	Namespace    string `mapstructure:"namespace,omitempty"`
 	Name         string `mapstructure:"name,omitempty"`
@@ -19,9 +34,9 @@ type FileMapping struct {
 type URLMap map[string]URLMapping
 
 type URLMapping struct {
-	FileMapping `mapstructure:",squash"`
-	Interval    metav1.Duration `mapstructure:"interval"`
-	Key         string
+	ResourceMapping `mapstructure:",squash"`
+	Interval        metav1.Duration `mapstructure:"interval"`
+	Key             string
 }
 
 type Watcher struct {

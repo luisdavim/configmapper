@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
+	"golang.org/x/sys/unix"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	konfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -47,13 +50,19 @@ func New(cfg config.FileMap) (*Watcher, error) {
 
 	curNS, _ := utils.GetInClusterNamespace()
 	for file, c := range cfg {
-		if c.Name == "" {
-			w.log.Error().Msgf("no resource name for %s", file)
+		if c.Name == "" && c.ProcessName == "" {
+			w.log.Error().Msgf("no resource or process name for %s", file)
 			continue
 		}
 		if c.Namespace == "" {
 			c.Namespace = curNS
 			w.config[file] = c
+		}
+		if c.Signal != "" {
+			if s, err := strconv.Atoi(c.Signal); err == nil {
+				c.Signal = unix.SignalName(syscall.Signal(s))
+				w.config[file] = c
+			}
 		}
 		err := watcher.Add(file)
 		if err != nil {
@@ -164,6 +173,25 @@ func (w *Watcher) update(path string) error {
 		if !found {
 			return fmt.Errorf("config for %s not found", path)
 		}
+	}
+
+	if cfg.ProcessName != "" {
+		reloadSig := syscall.SIGHUP
+		if cfg.Signal != "" {
+			reloadSig = unix.SignalNum(cfg.Signal)
+			if reloadSig == 0 {
+				return fmt.Errorf("invalid signal name: %s", cfg.Signal)
+			}
+		}
+		err := utils.ReloadProcess(cfg.ProcessName, reloadSig)
+		w.log.Err(err).Str("operation", "reload").Msgf("%s: %s", cfg.ProcessName, cfg.Signal)
+		if err != nil {
+			return err
+		}
+	}
+
+	if cfg.Name == "" {
+		return nil
 	}
 
 	data, err := getData(path)

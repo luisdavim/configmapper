@@ -15,6 +15,8 @@ It can also watch `ConfigMaps` (or `Secrets`) with a specific label selector and
   - Watch ConfigMaps and Secrets to keep local files up-to-date
 - Send a signal to a process when a local file is modified
   - Watch the local filesystem and reload processes
+- Post the contents of a local file to a URL
+  - Watch the local filesystem and make a `POST` request with the file contents
 - Filter based on labels
 
 Note that, for the processes reloading functionality, you'll need to set [`shareProcessNamespace: true` on your Pod](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) to allow sending signals across containers.

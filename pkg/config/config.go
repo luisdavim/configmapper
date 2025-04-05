@@ -23,12 +23,15 @@ type FileMapping struct {
 	ResourceMapping `mapstructure:",squash"`
 	// SignalMapping can map a file to a process, when the file changes the process is sent the specied signal
 	SignalMapping `mapstructure:",squash"`
+	// URL where to post the data from the watched file
+	URL string `mapstructure:"url,omitempty"`
 }
 
 type ResourceMapping struct {
 	ResourceType string `mapstructure:"type,omitempty"`
 	Namespace    string `mapstructure:"namespace,omitempty"`
 	Name         string `mapstructure:"name,omitempty"`
+	Key          string `mapstructure:"key,omitempty"`
 }
 
 type URLMap map[string]URLMapping
@@ -36,7 +39,6 @@ type URLMap map[string]URLMapping
 type URLMapping struct {
 	ResourceMapping `mapstructure:",squash"`
 	Interval        metav1.Duration `mapstructure:"interval"`
-	Key             string
 }
 
 type Watcher struct {

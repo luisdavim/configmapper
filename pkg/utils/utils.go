@@ -26,7 +26,7 @@ func GetInClusterNamespace() (string, error) {
 	// Check whether the namespace file exists.
 	// If not, we are not running in cluster so can't guess the namespace.
 	if _, err := os.Stat(inClusterNamespacePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("not running in-cluster, please specify LeaderElectionNamespace")
+		return "default", fmt.Errorf("not running in-cluster, please specify the namespace")
 	} else if err != nil {
 		return "", fmt.Errorf("error checking namespace file: %w", err)
 	}
@@ -36,7 +36,7 @@ func GetInClusterNamespace() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error reading namespace file: %w", err)
 	}
-	return string(namespace), nil
+	return strings.TrimSpace(string(namespace)), nil
 }
 
 func CreateOrUpdate(ctx context.Context, name, namespace, kind string, data map[string]string, c client.Client) (ctrlutil.OperationResult, error) {

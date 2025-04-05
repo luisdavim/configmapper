@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
 	"golang.org/x/sys/unix"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +25,7 @@ type Watcher struct {
 	fw     *fsnotify.Watcher
 	log    zerolog.Logger
 	k8s    client.Client
+	http   *retryablehttp.Client
 }
 
 func New(cfg config.FileMap) (*Watcher, error) {
@@ -45,6 +47,7 @@ func New(cfg config.FileMap) (*Watcher, error) {
 		config: cfg,
 		fw:     watcher,
 		log:    zerolog.New(os.Stderr).With().Timestamp().Str("name", "filewatcher").Logger().Level(zerolog.InfoLevel),
+		http:   retryablehttp.NewClient(),
 		k8s:    c,
 	}
 
@@ -56,6 +59,10 @@ func New(cfg config.FileMap) (*Watcher, error) {
 		}
 		if c.Namespace == "" {
 			c.Namespace = curNS
+			w.config[file] = c
+		}
+		if c.ResourceType == "" {
+			c.ResourceType = "configmap"
 			w.config[file] = c
 		}
 		if c.Signal != "" {
@@ -80,6 +87,9 @@ func (w *Watcher) Start(ctx context.Context) error {
 	for {
 		select {
 		case event := <-w.fw.Events:
+			if event.Has(fsnotify.Chmod) {
+				continue
+			}
 			// k8s configmaps use symlinks, we need this workaround.
 			// original configmap file is removed
 			if event.Has(fsnotify.Remove) {
@@ -91,13 +101,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 				if err := w.fw.Add(event.Name); err != nil {
 					w.log.Err(err).Msg("updating file watch")
 				}
-				err := w.update(ctx, event.Name)
+				err := w.do(ctx, event.Name)
 				w.log.Err(err).Msg("updating config")
 				continue
 			}
 			// also allow normal files to be modified and reloaded.
-			if event.Has(fsnotify.Write) {
-				err := w.update(ctx, event.Name)
+			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
+				err := w.do(ctx, event.Name)
 				w.log.Err(err).Msg("updating config")
 				continue
 			}
@@ -157,7 +167,7 @@ func getData(path string) (map[string]string, error) {
 	return data, nil
 }
 
-func (w *Watcher) update(ctx context.Context, path string) error {
+func (w *Watcher) do(ctx context.Context, path string) error {
 	cfg, ok := w.config[path]
 	if !ok {
 		var found bool
@@ -190,7 +200,8 @@ func (w *Watcher) update(ctx context.Context, path string) error {
 		}
 	}
 
-	if cfg.Name == "" {
+	if cfg.Name == "" && cfg.URL == "" {
+		// nothing left to be done
 		return nil
 	}
 
@@ -199,6 +210,27 @@ func (w *Watcher) update(ctx context.Context, path string) error {
 		return err
 	}
 
+	if cfg.URL != "" {
+		for _, payload := range data {
+			// TODO: set the bodyType from the file type?
+			w.http.Post(cfg.URL, "", payload)
+		}
+	}
+
+	if cfg.Name == "" {
+		// nothing left to be done
+		return nil
+	}
+
+	if cfg.Key != "" {
+		fname := filepath.Base(path)
+		if d, ok := data[fname]; ok {
+			data[cfg.Key] = d
+			delete(data, fname)
+		}
+	}
+
+	// Create or update the k8s resource
 	op, err := utils.CreateOrUpdate(ctx, cfg.Name, cfg.Namespace, cfg.ResourceType, data, w.k8s)
 	w.log.Err(err).Str("operation", string(op)).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
 	return err

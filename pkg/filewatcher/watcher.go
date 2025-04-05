@@ -91,13 +91,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 				if err := w.fw.Add(event.Name); err != nil {
 					w.log.Err(err).Msg("updating file watch")
 				}
-				err := w.update(event.Name)
+				err := w.update(ctx, event.Name)
 				w.log.Err(err).Msg("updating config")
 				continue
 			}
 			// also allow normal files to be modified and reloaded.
 			if event.Has(fsnotify.Write) {
-				err := w.update(event.Name)
+				err := w.update(ctx, event.Name)
 				w.log.Err(err).Msg("updating config")
 				continue
 			}
@@ -157,7 +157,7 @@ func getData(path string) (map[string]string, error) {
 	return data, nil
 }
 
-func (w *Watcher) update(path string) error {
+func (w *Watcher) update(ctx context.Context, path string) error {
 	cfg, ok := w.config[path]
 	if !ok {
 		var found bool
@@ -176,14 +176,14 @@ func (w *Watcher) update(path string) error {
 	}
 
 	if cfg.ProcessName != "" {
-		reloadSig := syscall.SIGHUP
+		sig := syscall.SIGHUP
 		if cfg.Signal != "" {
-			reloadSig = unix.SignalNum(cfg.Signal)
-			if reloadSig == 0 {
+			sig = unix.SignalNum(cfg.Signal)
+			if sig == 0 {
 				return fmt.Errorf("invalid signal name: %s", cfg.Signal)
 			}
 		}
-		err := utils.ReloadProcess(cfg.ProcessName, reloadSig)
+		err := utils.SignalProcess(ctx, cfg.ProcessName, sig)
 		w.log.Err(err).Str("operation", "reload").Msgf("%s: %s", cfg.ProcessName, cfg.Signal)
 		if err != nil {
 			return err
@@ -199,7 +199,7 @@ func (w *Watcher) update(path string) error {
 		return err
 	}
 
-	op, err := utils.CreateOrUpdate(cfg.Name, cfg.Namespace, cfg.ResourceType, data, w.k8s)
+	op, err := utils.CreateOrUpdate(ctx, cfg.Name, cfg.Namespace, cfg.ResourceType, data, w.k8s)
 	w.log.Err(err).Str("operation", string(op)).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
 	return err
 }

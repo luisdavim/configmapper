@@ -39,10 +39,10 @@ func GetInClusterNamespace() (string, error) {
 	return string(namespace), nil
 }
 
-func CreateOrUpdate(name, namespace, kind string, data map[string]string, c client.Client) (ctrlutil.OperationResult, error) {
+func CreateOrUpdate(ctx context.Context, name, namespace, kind string, data map[string]string, c client.Client) (ctrlutil.OperationResult, error) {
 	if strings.EqualFold(kind, "secret") {
 		obj := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
-		op, err := ctrlutil.CreateOrUpdate(context.TODO(), c, obj, func() error {
+		op, err := ctrlutil.CreateOrUpdate(ctx, c, obj, func() error {
 			obj.StringData = data
 			return nil
 		})
@@ -55,44 +55,37 @@ func CreateOrUpdate(name, namespace, kind string, data map[string]string, c clie
 	}
 
 	obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
-	op, err := ctrlutil.CreateOrUpdate(context.TODO(), c, obj, func() error {
+	op, err := ctrlutil.CreateOrUpdate(ctx, c, obj, func() error {
 		obj.Data = data
 		return nil
 	})
 	return op, err
 }
 
-func FindPID(process string) (int, error) {
-	processes, err := ps.Processes()
+func findProcess(ctx context.Context, process string) (*ps.Process, error) {
+	processes, err := ps.ProcessesWithContext(ctx)
 	if err != nil {
-		return -1, fmt.Errorf("failed to list processes: %v", err)
+		return nil, fmt.Errorf("failed to list processes: %v", err)
 	}
 
 	for _, p := range processes {
 		pname, err := p.Name()
 		if err != nil {
-			return -1, err
+			return nil, err
 		}
 		if pname == process {
-			// log.Printf("found executable %s (pid: %d)\n", pname, p.Pid
-			return int(p.Pid), nil
+			return p, nil
 		}
 	}
 
-	return -1, fmt.Errorf("no process matching %s found", process)
+	return nil, fmt.Errorf("no process matching %s found", process)
 }
 
-func ReloadProcess(process string, signal syscall.Signal) error {
-	pid, err := FindPID(process)
+func SignalProcess(ctx context.Context, process string, signal syscall.Signal) error {
+	p, err := findProcess(ctx, process)
 	if err != nil {
 		return err
 	}
 
-	err = syscall.Kill(pid, signal)
-	if err != nil {
-		return fmt.Errorf("could not send signal: %v", err)
-	}
-
-	// log.Printf("signal %s sent to %s (pid: %d)", signal, process, pid)
-	return nil
+	return p.SendSignalWithContext(ctx, signal)
 }

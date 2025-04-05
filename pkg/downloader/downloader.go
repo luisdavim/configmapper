@@ -105,14 +105,14 @@ func (d *Downloader) Stop() {
 func (d *Downloader) schedule(ctx context.Context, url string) {
 	d.log.Info().Str("url", url).Msg("starting")
 	go func() {
-		err := d.download(url)
+		err := d.download(ctx, url)
 		d.log.Err(err).Str("url", url).Msgf("downloading")
 		ticker := time.NewTicker(d.config[url].Interval.Duration)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				err := d.download(url)
+				err := d.download(ctx, url)
 				d.log.Err(err).Str("url", url).Msgf("downloading")
 			case <-ctx.Done():
 				d.log.Info().Str("url", url).Msg("context canceled, stopping")
@@ -125,7 +125,7 @@ func (d *Downloader) schedule(ctx context.Context, url string) {
 	}()
 }
 
-func (d *Downloader) download(url string) error {
+func (d *Downloader) download(ctx context.Context, url string) error {
 	d.RLock()
 	cfg, ok := d.config[url]
 	d.RUnlock()
@@ -142,7 +142,7 @@ func (d *Downloader) download(url string) error {
 		cfg.Key: body,
 	}
 
-	op, err := utils.CreateOrUpdate(cfg.Name, cfg.Namespace, cfg.ResourceType, data, d.k8s)
+	op, err := utils.CreateOrUpdate(ctx, cfg.Name, cfg.Namespace, cfg.ResourceType, data, d.k8s)
 	d.log.Err(err).Str("operation", string(op)).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
 	return err
 }

@@ -13,6 +13,8 @@ It can also watch `ConfigMaps` (or `Secrets`) with a specific label selector and
 - Extract files from ConfigMaps and Secrets
 - Update or delete local files when the ConfigMap or Secret changes
   - Watch ConfigMaps and Secrets to keep local files up-to-date
+- Send a signal to a process when a local file is modified
+  - Watch the local filesystem and reload processes
 - Filter based on labels
 
 ## Configuration
@@ -20,12 +22,17 @@ It can also watch `ConfigMaps` (or `Secrets`) with a specific label selector and
 The tool can be configured using a `yaml` file nameed `configmapper.yaml`:
 
 ```yaml
-# fileMap maps file paths to k8s ConfigMaps or Secrets
+# fileMap maps file paths to k8s ConfigMaps, Secrets or processes
 fileMap:
   "/tmp/config.yaml":
     type: ConfigMap
     name: my-cm
     namespace: foo
+    processName: myExec
+    signal: "SIGHUP"
+  "/tmp/users.yaml":
+    processName: myExec
+    signal: "SIGHUP"
   "/tmp/secrets.yaml":
     type: Secret
     name: my-secret

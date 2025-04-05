@@ -17,6 +17,8 @@ It can also watch `ConfigMaps` (or `Secrets`) with a specific label selector and
   - Watch the local filesystem and reload processes
 - Filter based on labels
 
+Note that, for the processes reloading functionality, you'll need to set [`shareProcessNamespace: true` on your Pod](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) to allow sending signals across containers.
+
 ## Configuration
 
 The tool can be configured using a `yaml` file nameed `configmapper.yaml`:
@@ -92,3 +94,21 @@ Flags:
       --watch-configmaps        Whether to watch ConfigMaps
       --watch-secrets           Whether to watch secrets
 ```
+
+## Caveats
+
+### Share Process Namespace
+
+Too use the process reloading functionality, the Pod needs to be configured to [Share Process Namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) with `shareProcessNamespace: true`.
+
+### Update delay
+
+When mapping a file that is mounted from ConfigMap or Secret, the changes won't take effect immediately.
+
+This is because the projected values of ConfigMaps and Secrets are not updated exactly when the underlying object changes, but instead they're [updated periodically](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#mounted-configmaps-are-updated-automatically) according to the `syncFrequency` argument to the [kubelet config](https://kubernetes.io/docs/reference/config-api/kubelet-config.v1beta1/). This defaults to 1 minute.
+
+### Files mounted via `subPath` are never updated
+
+This is a long-standing Kubernetes issue: ConfigMaps and Secrets mounted as files with a `subPath` key do not get updated by the kubelet. See [issue #50345](https://github.com/kubernetes/kubernetes/issues/50345) on Github.
+
+A possible workaround involves [mounting the Secret/ConfigMap without using subPath in a different folder and manually creating a symlink from an initContainer ahead of time to that folder](https://github.com/kubernetes/kubernetes/issues/50345#issuecomment-400647420), or if possible at all switching to not using `subPath`.

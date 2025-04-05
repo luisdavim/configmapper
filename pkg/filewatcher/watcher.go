@@ -73,7 +73,7 @@ func New(cfg config.FileMap) (*Watcher, error) {
 }
 
 func (w *Watcher) Start(ctx context.Context) error {
-	defer w.fw.Close()
+	defer func() { _ = w.fw.Close() }()
 	if len(w.config) == 0 {
 		return nil
 	}

@@ -124,7 +124,7 @@ func (r *Reconciler) cleanup(configMap *corev1.ConfigMap) error {
 	skip, _ := strconv.ParseBool(configMap.Annotations[consts.IgnoreDeleteAnnotation])
 	if !skip {
 		for file := range configMap.Data {
-			os.Remove(filepath.Join(baseDir, file))
+			_ = os.Remove(filepath.Join(baseDir, file))
 		}
 	}
 

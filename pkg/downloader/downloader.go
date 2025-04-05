@@ -157,7 +157,7 @@ func (d *Downloader) get(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	res.Body.Close()
+	_ = res.Body.Close()
 
 	return string(body), nil
 }

@@ -124,7 +124,7 @@ func (r *Reconciler) cleanup(secret *corev1.Secret) error {
 	skip, _ := strconv.ParseBool(secret.Annotations[consts.IgnoreDeleteAnnotation])
 	if !skip {
 		for file := range secret.Data {
-			os.Remove(filepath.Join(baseDir, file))
+			_ = os.Remove(filepath.Join(baseDir, file))
 		}
 	}
 

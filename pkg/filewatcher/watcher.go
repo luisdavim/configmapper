@@ -213,7 +213,11 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 	if cfg.URL != "" {
 		for _, payload := range data {
 			// TODO: set the bodyType from the file type?
-			w.http.Post(cfg.URL, "", payload)
+			resp, err := w.http.Post(cfg.URL, "", payload)
+			w.log.Err(err).Str("operation", "post").Msgf("%s: %s", cfg.URL, resp.Status)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

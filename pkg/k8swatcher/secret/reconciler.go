@@ -84,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	baseDir := r.DefaultPath
-	if path, ok := secret.Annotations[consts.TargetDirAnnotation]; ok {
+	if path, ok := secret.Annotations[consts.TargetDirAnnotation]; ok && path != "" {
 		baseDir = path
 	}
 	for file, data := range secret.Data {

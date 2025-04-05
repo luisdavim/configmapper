@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/luisdavim/configmapper/pkg/k8swatcher/consts"
+	"github.com/luisdavim/configmapper/pkg/k8swatcher/common"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/filter"
 )
 
@@ -37,14 +37,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, ps []predicate.Predicate
 // predicates will filter events for secrets that haven't changed
 // or are annotated to be skipped
 func predicates(ps []predicate.Predicate) predicate.Predicate {
-	ps = append(ps, predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}), filter.SkipAnnotation(consts.SkipAnnotation))
+	ps = append(ps, filter.Default(), filter.SkipAnnotation(common.SkipAnnotation))
 
 	return predicate.And(ps...)
 }
 
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=secrets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=secrets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=secrets/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=secrets/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.Log.WithName("secretController").WithValues("secret", req.NamespacedName)
@@ -57,7 +56,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if !secret.DeletionTimestamp.IsZero() {
 		// The object is being deleted
-		if controllerutil.ContainsFinalizer(secret, consts.FinalizerName) {
+		if controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
 			if err := r.cleanup(secret); err != nil {
 				log.Error(err, "failed to cleanup")
 				return ctrl.Result{}, err
@@ -73,8 +72,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	if !controllerutil.ContainsFinalizer(secret, consts.FinalizerName) {
-		controllerutil.AddFinalizer(secret, consts.FinalizerName)
+	if !controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
+		controllerutil.AddFinalizer(secret, common.FinalizerName)
 		if err := r.Update(ctx, secret); err != nil {
 			log.Error(err, "failed to add finalizer")
 			return ctrl.Result{}, err
@@ -84,7 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	baseDir := r.DefaultPath
-	if path, ok := secret.Annotations[consts.TargetDirAnnotation]; ok && path != "" {
+	if path := common.GetBaseDir(secret); path != "" {
 		baseDir = path
 	}
 	for file, data := range secret.Data {
@@ -98,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) needsCleanUp(secret *corev1.Secret) bool {
-	if v, ok := secret.Annotations[consts.SkipAnnotation]; ok {
+	if v, ok := secret.Annotations[common.SkipAnnotation]; ok {
 		// skip annotation was added or changed from false to true
 		if skip, _ := strconv.ParseBool(v); skip {
 			return true
@@ -118,10 +117,10 @@ func (r *Reconciler) needsCleanUp(secret *corev1.Secret) bool {
 
 func (r *Reconciler) cleanup(secret *corev1.Secret) error {
 	baseDir := r.DefaultPath
-	if path, ok := secret.Annotations[consts.TargetDirAnnotation]; ok {
+	if path, ok := secret.Annotations[common.TargetDirAnnotation]; ok {
 		baseDir = path
 	}
-	skip, _ := strconv.ParseBool(secret.Annotations[consts.IgnoreDeleteAnnotation])
+	skip, _ := strconv.ParseBool(secret.Annotations[common.IgnoreDeleteAnnotation])
 	if !skip {
 		for file := range secret.Data {
 			_ = os.Remove(filepath.Join(baseDir, file))
@@ -129,7 +128,7 @@ func (r *Reconciler) cleanup(secret *corev1.Secret) error {
 	}
 
 	// we won't be tracking this resource anymore
-	controllerutil.RemoveFinalizer(secret, consts.FinalizerName)
+	controllerutil.RemoveFinalizer(secret, common.FinalizerName)
 	if err := r.Update(context.Background(), secret); err != nil {
 		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}

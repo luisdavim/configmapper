@@ -25,6 +25,10 @@ func (r *Reconciler) NeedsCleanUp(obj client.Object) bool {
 		}
 	}
 
+	if r.RequiredLabel == "" {
+		return false
+	}
+
 	// required label was removed or set to false
 	labels := obj.GetLabels()
 

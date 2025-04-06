@@ -9,37 +9,24 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/common"
-	"github.com/luisdavim/configmapper/pkg/k8swatcher/filter"
 )
 
 // Reconciler reconciles a Secret object
 type Reconciler struct {
-	RequiredLabel string
-	DefaultPath   string
-	client.Client
-	Scheme *runtime.Scheme
+	common.Reconciler
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, ps []predicate.Predicate) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Secret{}).
-		WithEventFilter(predicates(ps)).
+		WithEventFilter(common.Predicates(ps)).
 		Complete(r)
-}
-
-// predicates will filter events for secrets that haven't changed
-// or are annotated to be skipped
-func predicates(ps []predicate.Predicate) predicate.Predicate {
-	ps = append(ps, filter.Default(), filter.SkipAnnotation(common.SkipAnnotation))
-
-	return predicate.And(ps...)
 }
 
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
@@ -54,10 +41,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	baseDir := r.DefaultPath
+	if path := common.GetBaseDir(secret); path != "" {
+		baseDir = path
+	}
+
 	if !secret.DeletionTimestamp.IsZero() {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
-			if err := r.cleanup(secret); err != nil {
+			if err := r.cleanup(secret, baseDir); err != nil {
 				log.Error(err, "failed to cleanup")
 				return ctrl.Result{}, err
 			}
@@ -65,11 +57,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if r.needsCleanUp(secret) {
+	if r.NeedsCleanUp(secret) {
 		// the skip annotation was added or changed from false to true
 		// or the required label was removed or set to false
-		err := r.cleanup(secret)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, r.cleanup(secret, baseDir)
 	}
 
 	if !controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
@@ -82,10 +73,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
-	baseDir := r.DefaultPath
-	if path := common.GetBaseDir(secret); path != "" {
-		baseDir = path
-	}
 	for file, data := range secret.Data {
 		log.WithValues("file", file, "path", baseDir).Info("writting file")
 		if err := os.WriteFile(filepath.Join(baseDir, file), data, 0o644); err != nil {
@@ -96,31 +83,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: time.Hour}, nil
 }
 
-func (r *Reconciler) needsCleanUp(secret *corev1.Secret) bool {
-	if v, ok := secret.Annotations[common.SkipAnnotation]; ok {
-		// skip annotation was added or changed from false to true
-		if skip, _ := strconv.ParseBool(v); skip {
-			return true
-		}
+func (r *Reconciler) cleanup(secret *corev1.Secret, baseDir string) error {
+	var skip bool
+	if secret.Annotations != nil {
+		skip, _ = strconv.ParseBool(secret.Annotations[common.IgnoreDeleteAnnotation])
 	}
 
-	// required label was removed or set to false
-	v, ok := secret.Labels[r.RequiredLabel]
-	if !ok {
-		return true
-	}
-	if inc, _ := strconv.ParseBool(v); !inc {
-		return true
-	}
-	return false
-}
-
-func (r *Reconciler) cleanup(secret *corev1.Secret) error {
-	baseDir := r.DefaultPath
-	if path, ok := secret.Annotations[common.TargetDirAnnotation]; ok {
-		baseDir = path
-	}
-	skip, _ := strconv.ParseBool(secret.Annotations[common.IgnoreDeleteAnnotation])
 	if !skip {
 		for file := range secret.Data {
 			_ = os.Remove(filepath.Join(baseDir, file))

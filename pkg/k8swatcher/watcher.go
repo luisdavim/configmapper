@@ -12,6 +12,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/luisdavim/configmapper/pkg/config"
+	"github.com/luisdavim/configmapper/pkg/k8swatcher/common"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/configmap"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/filter"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher/secret"
@@ -103,10 +104,12 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	// watch configMaps
 	if cfg.ConfigMaps {
 		if err := (&configmap.Reconciler{
-			RequiredLabel: cfg.RequiredLabel,
-			DefaultPath:   cfg.DefaultPath,
-			Client:        mgr.GetClient(),
-			Scheme:        mgr.GetScheme(),
+			Reconciler: common.Reconciler{
+				RequiredLabel: cfg.RequiredLabel,
+				DefaultPath:   cfg.DefaultPath,
+				Client:        mgr.GetClient(),
+				Scheme:        mgr.GetScheme(),
+			},
 		}).SetupWithManager(mgr, filters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConfigMaps")
 			return fmt.Errorf("unable to create controller: %w", err)
@@ -116,10 +119,12 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	// watch secrets
 	if cfg.Secrets {
 		if err := (&secret.Reconciler{
-			RequiredLabel: cfg.RequiredLabel,
-			DefaultPath:   cfg.DefaultPath,
-			Client:        mgr.GetClient(),
-			Scheme:        mgr.GetScheme(),
+			Reconciler: common.Reconciler{
+				RequiredLabel: cfg.RequiredLabel,
+				DefaultPath:   cfg.DefaultPath,
+				Client:        mgr.GetClient(),
+				Scheme:        mgr.GetScheme(),
+			},
 		}).SetupWithManager(mgr, filters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secrets")
 			return fmt.Errorf("unable to create controller: %w", err)

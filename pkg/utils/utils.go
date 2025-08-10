@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -15,6 +16,8 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+var ErrNotInK8s = errors.New("not running in-cluster, please specify the namespace")
+
 const inClusterNamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 
 // GetInClusterNamespace returns the pod's namespace
@@ -25,9 +28,10 @@ func GetInClusterNamespace() (string, error) {
 
 	// Check whether the namespace file exists.
 	// If not, we are not running in cluster so can't guess the namespace.
-	if _, err := os.Stat(inClusterNamespacePath); os.IsNotExist(err) {
-		return "default", fmt.Errorf("not running in-cluster, please specify the namespace")
-	} else if err != nil {
+	if _, err := os.Stat(inClusterNamespacePath); err != nil {
+		if os.IsNotExist(err) {
+			return "default", ErrNotInK8s
+		}
 		return "", fmt.Errorf("error checking namespace file: %w", err)
 	}
 

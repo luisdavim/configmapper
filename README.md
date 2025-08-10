@@ -28,15 +28,18 @@ The tool can be configured using a `yaml` file nameed `configmapper.yaml`:
 ```yaml
 # fileMap maps file paths to k8s ConfigMaps, Secrets or processes
 fileMap:
+  # create or update a ConfigMap when a file changes, also send a signal to a process
   "/tmp/config.yaml":
     type: ConfigMap
     name: my-cm
     namespace: foo
     processName: myExec
     signal: "SIGHUP"
+  # send a signal to a specific process when a file changes
   "/tmp/users.yaml":
     processName: myExec
     signal: "SIGHUP"
+  # create or update a Secret when a file changes
   "/tmp/secrets.yaml":
     type: Secret
     name: my-secret
@@ -44,19 +47,21 @@ fileMap:
 
 # urlMap maps urls to k8s ConfigMaps or Secrets
 urlMap:
+   # periodically poll a URL and create or update a ConfigMap with the response body
   "https://fs.example.com/config":
     type: ConfigMap
     name: my-other-cm
     key: config.json
     namespace: foo
     interval: 5m # how frequently to download, defaults to 60s
+   # periodically poll a URL and create or update a Secret with the response body
   "https://fs.example.com/secret":
     type: Secret
     name: my-other-secret
     key: secret.json
     namespace: foo
 
-# watcher can watch ConfigMap and Secrets to create files in the Pod's FS
+# watcher can watch ConfigMap and Secrets to create files from them in the Pod's filesystem
 watcher:
   configMaps: true
   secrets: true
@@ -114,3 +119,4 @@ This is because the projected values of ConfigMaps and Secrets are not updated e
 This is a long-standing Kubernetes issue: ConfigMaps and Secrets mounted as files with a `subPath` key do not get updated by the kubelet. See [issue #50345](https://github.com/kubernetes/kubernetes/issues/50345) on Github.
 
 A possible workaround involves [mounting the Secret/ConfigMap without using subPath in a different folder and manually creating a symlink from an initContainer ahead of time to that folder](https://github.com/kubernetes/kubernetes/issues/50345#issuecomment-400647420), or if possible at all switching to not using `subPath`.
+Or use the `configmapper` to manage the files instead of mounting them directly.

@@ -73,6 +73,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
+	if err := os.MkdirAll(baseDir, 0700); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	for file, data := range configMap.Data {
 		log.WithValues("file", file, "path", baseDir).Info("writting file")
 		if err := os.WriteFile(filepath.Join(baseDir, file), []byte(data), 0o644); err != nil {

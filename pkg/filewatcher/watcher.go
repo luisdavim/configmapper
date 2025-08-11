@@ -210,6 +210,7 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 		return err
 	}
 
+	// post the file contents to the configured URL
 	if cfg.URL != "" {
 		for _, payload := range data {
 			// TODO: set the bodyType from the file type?
@@ -228,7 +229,7 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 
 	if cfg.Key != "" {
 		fname := filepath.Base(path)
-		if d, ok := data[fname]; ok {
+		if d, ok := data[fname]; ok && fname != cfg.Key {
 			data[cfg.Key] = d
 			delete(data, fname)
 		}

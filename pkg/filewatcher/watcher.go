@@ -3,6 +3,7 @@ package filewatcher
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -131,7 +132,7 @@ func getFilesFromPath(path string) ([]string, error) {
 	}
 
 	var files []string
-	err = filepath.Walk(path, func(p string, i os.FileInfo, err error) error {
+	err = filepath.WalkDir(path, func(p string, i fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

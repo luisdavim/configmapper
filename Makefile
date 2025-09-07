@@ -155,7 +155,7 @@ lint: lint-go lint-shell lint-dockerfile lint-yaml lint-helm ## Run all availabl
 
 lint-go: deps ## Use golintci-lint on your project
 	$(eval OUTPUT_OPTIONS = $(shell [ "${EXPORT_RESULT}" == "true" ] && echo "--out-format checkstyle ./... | tee /dev/tty > checkstyle-report.xml" || echo "" ))
-	golangci-lint run --deadline=65s $(OUTPUT_OPTIONS)
+	golangci-lint run --timeout=65s $(OUTPUT_OPTIONS)
 
 lint-yaml: ## Use yamllint on the yaml file of your projects
 ifeq ($(EXPORT_RESULT), true)

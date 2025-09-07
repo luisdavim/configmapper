@@ -72,17 +72,17 @@ build: test ## Build your project and put the output binary in out/bin/
 	GO111MODULE=on $(GOCMD) build -o bin/$(BINARY_NAME) .
 
 build-release: fmt lint-go ## Build your project for all target platforms and put the output binaries in dist/
-	goreleaser build --snapshot --rm-dist
+	goreleaser build --snapshot --clean
 
 tag: deps fmt lint test ## Bump the previous tag and push the new one
 	git tag $(NEXT_VERSION)
 	git push --tags
 
 release: test tag ## Release your project and put the output binaries in dist/
-	goreleaser release --rm-dist
+	goreleaser release --clean
 
 release-local: deps test ## Release your project and put the output binaries in dist/
-	goreleaser release --snapshot --skip-publish --rm-dist
+	goreleaser release --snapshot --skip-publish --clean
 	./scripts/publish.sh
 
 clean: ## Remove build related file

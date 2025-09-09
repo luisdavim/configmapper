@@ -4,6 +4,12 @@ ConfigMapper is meant to be used as a sidecar in a Kubernetes `Pod` to map local
 It can watch files in the local filesystem and when they change, create or update a `ConfigMap` (or `Secret`).
 It can also watch `ConfigMaps` (or `Secrets`) with a specific label selector and create or update files in the local filesystem.
 
+A pre-built docker image is available in the [packages](https://github.com/luisdavim/configmapper/pkgs/container/configmapper) page:
+
+```sh
+docker pull ghcr.io/luisdavim/configmapper:main
+```
+
 ## Features
 
 - Create or update ConfigMaps or Secrets from local files

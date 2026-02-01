@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -92,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{RequeueAfter: time.Hour}, nil
+	return ctrl.Result{RequeueAfter: r.RequeueInterval}, nil
 }
 
 func (r *Reconciler) cleanup(configMap *corev1.ConfigMap, baseDir string) error {

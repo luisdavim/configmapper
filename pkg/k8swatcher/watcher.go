@@ -126,12 +126,13 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	if cfg.ConfigMaps {
 		if err := (&configmap.Reconciler{
 			Reconciler: common.Reconciler{
-				RequiredLabel: cfg.RequiredLabel,
-				DefaultPath:   cfg.DefaultPath,
-				ProcessName:   cfg.ProcessName,
-				Signal:        sig,
-				Client:        mgr.GetClient(),
-				Scheme:        mgr.GetScheme(),
+				RequeueInterval: cfg.Interval.Duration,
+				RequiredLabel:   cfg.RequiredLabel,
+				DefaultPath:     cfg.DefaultPath,
+				ProcessName:     cfg.ProcessName,
+				Signal:          sig,
+				Client:          mgr.GetClient(),
+				Scheme:          mgr.GetScheme(),
 			},
 		}).SetupWithManager(mgr, filters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConfigMaps")
@@ -143,12 +144,13 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	if cfg.Secrets {
 		if err := (&secret.Reconciler{
 			Reconciler: common.Reconciler{
-				RequiredLabel: cfg.RequiredLabel,
-				DefaultPath:   cfg.DefaultPath,
-				ProcessName:   cfg.ProcessName,
-				Signal:        sig,
-				Client:        mgr.GetClient(),
-				Scheme:        mgr.GetScheme(),
+				RequeueInterval: cfg.Interval.Duration,
+				RequiredLabel:   cfg.RequiredLabel,
+				DefaultPath:     cfg.DefaultPath,
+				ProcessName:     cfg.ProcessName,
+				Signal:          sig,
+				Client:          mgr.GetClient(),
+				Scheme:          mgr.GetScheme(),
 			},
 		}).SetupWithManager(mgr, filters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secrets")

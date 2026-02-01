@@ -47,11 +47,12 @@ type URLMapping struct {
 }
 
 type Watcher struct {
-	ConfigMaps    bool   `mapstructure:"configMaps,omitempty"`
-	Secrets       bool   `mapstructure:"secrets,omitempty"`
-	Namespaces    string `mapstructure:"namespaces,omitempty"`
-	RequiredLabel string `mapstructure:"requiredLabel,omitempty"`
-	LabelSelector string `mapstructure:"labelSelector,omitempty"`
-	DefaultPath   string `mapstructure:"defaultPath,omitempty"`
+	ConfigMaps    bool            `mapstructure:"configMaps,omitempty"`
+	Secrets       bool            `mapstructure:"secrets,omitempty"`
+	Namespaces    string          `mapstructure:"namespaces,omitempty"`
+	RequiredLabel string          `mapstructure:"requiredLabel,omitempty"`
+	LabelSelector string          `mapstructure:"labelSelector,omitempty"`
+	DefaultPath   string          `mapstructure:"defaultPath,omitempty"`
+	Interval      metav1.Duration `mapstructure:"interval,omitempty"`
 	SignalMapping `mapstructure:",squash"`
 }

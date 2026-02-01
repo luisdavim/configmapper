@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/luisdavim/configmapper/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,10 +15,11 @@ import (
 )
 
 type Reconciler struct {
-	RequiredLabel string
-	DefaultPath   string
-	ProcessName   string
-	Signal        syscall.Signal
+	RequeueInterval time.Duration
+	RequiredLabel   string
+	DefaultPath     string
+	ProcessName     string
+	Signal          syscall.Signal
 	client.Client
 	Scheme *runtime.Scheme
 }

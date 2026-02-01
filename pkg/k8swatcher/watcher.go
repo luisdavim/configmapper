@@ -20,6 +20,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -82,6 +83,11 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 
 	if cfg.RequiredLabel != "" {
 		filters = append(filters, filter.ByLabel(cfg.RequiredLabel))
+		requireKey, err := labels.NewRequirement(cfg.RequiredLabel, selection.Exists, nil)
+		if err != nil {
+			return fmt.Errorf("failed to setup required label: %w", err)
+		}
+		ctrlOpts.Cache.DefaultLabelSelector = labels.NewSelector().Add(*requireKey)
 	}
 
 	if cfg.LabelSelector != "" {
@@ -92,7 +98,12 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 		filters = append(filters, predicate.NewPredicateFuncs(func(o client.Object) bool {
 			return selector.Matches(labels.Set(o.GetLabels()))
 		}))
-		ctrlOpts.Cache.DefaultLabelSelector = selector
+		if ctrlOpts.Cache.DefaultLabelSelector == nil {
+			ctrlOpts.Cache.DefaultLabelSelector = selector
+		} else {
+			reqs, _ := selector.Requirements()
+			ctrlOpts.Cache.DefaultLabelSelector.Add(reqs...)
+		}
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOpts)

@@ -17,6 +17,7 @@ type SignalMapping struct {
 
 type FileMap map[string]FileMapping
 
+// FileMapping allows mappting filepaths to k8s resources, OS signals and/or URLs
 type FileMapping struct {
 	// ResourceMapping can map a file to a Kubernetes Secret or ConfigMap
 	// when the file changes the Kubernetes resource is updated with the file contentes
@@ -36,9 +37,13 @@ type ResourceMapping struct {
 
 type URLMap map[string]URLMapping
 
+// URLMapping allows mapping URLs to k8s resources
 type URLMapping struct {
+	// ResourceMapping can map a URL to a Kubernetes Secret or ConfigMap
+	// The Kubernetes resource is updated with the data fetched from the URL
 	ResourceMapping `mapstructure:",squash"`
-	Interval        metav1.Duration `mapstructure:"interval"`
+	// Interval defines how often to poll the URL
+	Interval metav1.Duration `mapstructure:"interval"`
 }
 
 type Watcher struct {

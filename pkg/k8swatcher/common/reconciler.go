@@ -1,15 +1,23 @@
 package common
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strconv"
+	"syscall"
 
+	"github.com/luisdavim/configmapper/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Reconciler struct {
 	RequiredLabel string
 	DefaultPath   string
+	ProcessName   string
+	Signal        syscall.Signal
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -44,4 +52,33 @@ func (r *Reconciler) NeedsCleanUp(obj client.Object) bool {
 		return true
 	}
 	return false
+}
+
+func (r *Reconciler) HandleFileUpdate(ctx context.Context, file, baseDir string, data []byte) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.WithValues("file", file, "path", baseDir).Info("writting file")
+	if err := os.WriteFile(filepath.Join(baseDir, file), data, 0o644); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Reconciler) SignalProcess(ctx context.Context) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	if r.ProcessName == "" {
+		return nil
+	}
+
+	err := utils.SignalProcess(ctx, r.ProcessName, r.Signal)
+	if err != nil {
+		log.Error(err, "failed to signal process", "ProcessName", r.ProcessName, "Signal", r.Signal.String())
+		return err
+	}
+
+	log.Info("signaled process", "ProcessName", r.ProcessName, "Signal", r.Signal.String())
+
+	return nil
 }

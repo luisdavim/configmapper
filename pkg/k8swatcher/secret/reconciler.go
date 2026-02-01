@@ -78,10 +78,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	for file, data := range secret.Data {
-		log.WithValues("file", file, "path", baseDir).Info("writting file")
-		if err := os.WriteFile(filepath.Join(baseDir, file), data, 0o644); err != nil {
+		if err := r.HandleFileUpdate(ctx, file, baseDir, data); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	if err := r.SignalProcess(ctx); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{RequeueAfter: time.Hour}, nil

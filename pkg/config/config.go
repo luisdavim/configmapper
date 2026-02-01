@@ -53,4 +53,5 @@ type Watcher struct {
 	RequiredLabel string `mapstructure:"requiredLabel,omitempty"`
 	LabelSelector string `mapstructure:"labelSelector,omitempty"`
 	DefaultPath   string `mapstructure:"defaultPath,omitempty"`
+	SignalMapping `mapstructure:",squash"`
 }

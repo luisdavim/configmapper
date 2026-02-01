@@ -5,10 +5,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"syscall"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
+	"golang.org/x/sys/unix"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/luisdavim/configmapper/pkg/config"
@@ -112,12 +114,22 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 		return fmt.Errorf("unable to create manager: %w", err)
 	}
 
+	sig := syscall.SIGHUP
+	if cfg.Signal != "" {
+		sig = unix.SignalNum(cfg.Signal)
+		if sig == 0 {
+			return fmt.Errorf("invalid signal name: %s", cfg.Signal)
+		}
+	}
+
 	// watch configMaps
 	if cfg.ConfigMaps {
 		if err := (&configmap.Reconciler{
 			Reconciler: common.Reconciler{
 				RequiredLabel: cfg.RequiredLabel,
 				DefaultPath:   cfg.DefaultPath,
+				ProcessName:   cfg.ProcessName,
+				Signal:        sig,
 				Client:        mgr.GetClient(),
 				Scheme:        mgr.GetScheme(),
 			},
@@ -133,6 +145,8 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 			Reconciler: common.Reconciler{
 				RequiredLabel: cfg.RequiredLabel,
 				DefaultPath:   cfg.DefaultPath,
+				ProcessName:   cfg.ProcessName,
+				Signal:        sig,
 				Client:        mgr.GetClient(),
 				Scheme:        mgr.GetScheme(),
 			},

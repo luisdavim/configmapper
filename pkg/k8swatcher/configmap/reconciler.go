@@ -78,16 +78,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	for file, data := range configMap.Data {
-		log.WithValues("file", file, "path", baseDir).Info("writting file")
-		if err := os.WriteFile(filepath.Join(baseDir, file), []byte(data), 0o644); err != nil {
+		if err := r.HandleFileUpdate(ctx, file, baseDir, []byte(data)); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 	for file, data := range configMap.BinaryData {
-		log.WithValues("file", file, "path", baseDir).Info("writting file")
-		if err := os.WriteFile(filepath.Join(baseDir, file), data, 0o644); err != nil {
+		if err := r.HandleFileUpdate(ctx, file, baseDir, data); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	if err := r.SignalProcess(ctx); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{RequeueAfter: time.Hour}, nil

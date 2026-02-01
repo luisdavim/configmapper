@@ -1,6 +1,10 @@
 package config
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"syscall"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 type Config struct {
 	URLMap  URLMap  `mapstructure:"urlMap,omitempty"`
@@ -11,8 +15,8 @@ type Config struct {
 type SignalMap map[string]SignalMapping
 
 type SignalMapping struct {
-	ProcessName string `mapstructure:"processName,omitempty"`
-	Signal      string `mapstructure:"signal,omitempty"`
+	ProcessName string         `mapstructure:"processName,omitempty"`
+	Signal      syscall.Signal `mapstructure:"signal,omitempty"`
 }
 
 type FileMap map[string]FileMapping

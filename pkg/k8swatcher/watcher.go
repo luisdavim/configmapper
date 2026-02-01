@@ -10,7 +10,6 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
-	"golang.org/x/sys/unix"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/luisdavim/configmapper/pkg/config"
@@ -115,11 +114,8 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	}
 
 	sig := syscall.SIGHUP
-	if cfg.Signal != "" {
-		sig = unix.SignalNum(cfg.Signal)
-		if sig == 0 {
-			return fmt.Errorf("invalid signal name: %s", cfg.Signal)
-		}
+	if cfg.Signal != 0 {
+		sig = cfg.Signal
 	}
 
 	// watch configMaps

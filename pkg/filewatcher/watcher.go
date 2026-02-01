@@ -6,14 +6,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog"
-	"golang.org/x/sys/unix"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	konfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -66,11 +64,9 @@ func New(cfg config.FileMap) (*Watcher, error) {
 			c.ResourceType = "configmap"
 			w.config[file] = c
 		}
-		if c.Signal != "" {
-			if s, err := strconv.Atoi(c.Signal); err == nil {
-				c.Signal = unix.SignalName(syscall.Signal(s))
-				w.config[file] = c
-			}
+		if c.Signal == 0 {
+			c.Signal = syscall.SIGHUP
+			w.config[file] = c
 		}
 		err := watcher.Add(file)
 		if err != nil {
@@ -188,11 +184,8 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 
 	if cfg.ProcessName != "" {
 		sig := syscall.SIGHUP
-		if cfg.Signal != "" {
-			sig = unix.SignalNum(cfg.Signal)
-			if sig == 0 {
-				return fmt.Errorf("invalid signal name: %s", cfg.Signal)
-			}
+		if cfg.Signal != 0 {
+			sig = cfg.Signal
 		}
 		err := utils.SignalProcess(ctx, cfg.ProcessName, sig)
 		w.log.Err(err).Str("operation", "reload").Msgf("%s: %s", cfg.ProcessName, cfg.Signal)

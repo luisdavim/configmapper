@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -38,9 +39,17 @@ func StringToSyscallSignalHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		res := unix.SignalNum(data.(string))
+		s := data.(string)
+		if s == "" {
+			return syscall.SIGHUP, nil
+		}
+
+		res := unix.SignalNum(s)
 		if res == 0 {
-			return res, fmt.Errorf("invalid signal name: %s", data)
+			if i, err := strconv.Atoi(s); err == nil {
+				return syscall.Signal(i), nil
+			}
+			return res, fmt.Errorf("invalid signal name: %s", s)
 		}
 
 		return res, nil

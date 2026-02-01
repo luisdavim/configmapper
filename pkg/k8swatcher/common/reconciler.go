@@ -8,10 +8,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luisdavim/configmapper/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/luisdavim/configmapper/pkg/utils"
 )
 
 type Reconciler struct {

@@ -99,13 +99,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 					w.log.Err(err).Msg("updating file watch")
 				}
 				err := w.do(ctx, event.Name)
-				w.log.Err(err).Msg("updating config")
+				w.log.Err(err).Str("path", event.Name).Msg("updating config")
 				continue
 			}
 			// also allow normal files to be modified and reloaded.
 			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
 				err := w.do(ctx, event.Name)
-				w.log.Err(err).Msg("updating config")
+				w.log.Err(err).Str("path", event.Name).Msg("updating config")
 				continue
 			}
 		case err := <-w.fw.Errors:
@@ -167,19 +167,23 @@ func getData(path string) (map[string]string, error) {
 func (w *Watcher) do(ctx context.Context, path string) error {
 	cfg, ok := w.config[path]
 	if !ok {
-		var found bool
+		var longestMatch string
 		// the path may point to a file in a watched folder
 		for n := range w.config {
 			if strings.HasPrefix(path, n) {
-				cfg = w.config[n]
-				path = n
-				found = true
-				break
+				if len(n) > len(longestMatch) {
+					longestMatch = n
+				}
+				// TODO: should we run all matching configs or just the longest matching one?
+				// if err := w.do(ctx, n); err != nil {
+				// 	w.log.Err(err).Str("path", n).Msg("updating config")
+				// }
 			}
 		}
-		if !found {
+		if longestMatch == "" {
 			return fmt.Errorf("config for %s not found", path)
 		}
+		return w.do(ctx, longestMatch)
 	}
 
 	if cfg.ProcessName != "" {
@@ -188,7 +192,7 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 			sig = cfg.Signal
 		}
 		err := utils.SignalProcess(ctx, cfg.ProcessName, sig)
-		w.log.Err(err).Str("operation", "reload").Msgf("%s: %s", cfg.ProcessName, cfg.Signal)
+		w.log.Err(err).Str("operation", "reload").Str("path", path).Msgf("%s: %s", cfg.ProcessName, cfg.Signal)
 		if err != nil {
 			return err
 		}
@@ -209,7 +213,7 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 		for _, payload := range data {
 			// TODO: set the bodyType from the file type?
 			resp, err := w.http.Post(cfg.URL, "", payload)
-			w.log.Err(err).Str("operation", "post").Msgf("%s: %s", cfg.URL, resp.Status)
+			w.log.Err(err).Str("operation", "post").Str("path", path).Msgf("%s: %s", cfg.URL, resp.Status)
 			if err != nil {
 				return err
 			}
@@ -231,6 +235,6 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 
 	// Create or update the k8s resource
 	op, err := utils.CreateOrUpdate(ctx, cfg.Name, cfg.Namespace, cfg.ResourceType, data, w.k8s)
-	w.log.Err(err).Str("operation", string(op)).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
+	w.log.Err(err).Str("operation", string(op)).Str("path", path).Msgf("%s: %s/%s", cfg.ResourceType, cfg.Namespace, cfg.Name)
 	return err
 }

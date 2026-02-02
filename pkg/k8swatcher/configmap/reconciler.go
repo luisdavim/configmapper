@@ -77,12 +77,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	for file, data := range configMap.Data {
-		if err := r.HandleFileUpdate(ctx, file, baseDir, []byte(data)); err != nil {
+		if err := r.HandleFileUpdate(ctx, file, baseDir, []byte(data), true); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 	for file, data := range configMap.BinaryData {
-		if err := r.HandleFileUpdate(ctx, file, baseDir, data); err != nil {
+		if err := r.HandleFileUpdate(ctx, file, baseDir, data, true); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

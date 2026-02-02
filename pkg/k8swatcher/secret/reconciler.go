@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	for file, data := range secret.Data {
-		if err := r.HandleFileUpdate(ctx, file, baseDir, data); err != nil {
+		if err := r.HandleFileUpdate(ctx, file, baseDir, data, true); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

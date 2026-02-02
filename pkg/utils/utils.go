@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"syscall"
@@ -92,4 +94,46 @@ func SignalProcess(ctx context.Context, process string, signal syscall.Signal) e
 	}
 
 	return p.SendSignalWithContext(ctx, signal)
+}
+
+func ReadersEqual(r1, r2 io.Reader, chunkSize int) (bool, error) {
+	if chunkSize == 0 {
+		chunkSize = 4 * 1024
+	}
+
+	b1 := make([]byte, chunkSize)
+	b2 := make([]byte, chunkSize)
+
+	for {
+		n1, err1 := io.ReadFull(r1, b1)
+		n2, err2 := io.ReadFull(r2, b2)
+
+		// https://pkg.go.dev/io#Reader
+		// > Callers should always process the n > 0 bytes returned
+		// > before considering the error err. Doing so correctly
+		// > handles I/O errors that happen after reading some bytes
+		// > and also both of the allowed EOF behaviors.
+
+		if n1 != n2 {
+			return false, nil
+		}
+
+		if !bytes.Equal(b1[:n1], b2[:n2]) {
+			return false, nil
+		}
+
+		// reached the end of both readers
+		if (err1 == io.EOF && err2 == io.EOF) || (err1 == io.ErrUnexpectedEOF && err2 == io.ErrUnexpectedEOF) {
+			return true, nil
+		}
+
+		// reached the end of one of the readers
+		if (err1 != err2) && (err1 == nil || err2 == nil) && (err1 == io.EOF || err2 == io.EOF || err1 == io.ErrUnexpectedEOF || err2 == io.ErrUnexpectedEOF) {
+			return false, nil
+		}
+
+		if err1 != nil || err2 != nil {
+			return false, errors.Join(err1, err2)
+		}
+	}
 }

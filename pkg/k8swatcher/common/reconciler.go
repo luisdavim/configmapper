@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -57,11 +58,26 @@ func (r *Reconciler) NeedsCleanUp(obj client.Object) bool {
 	return false
 }
 
-func (r *Reconciler) HandleFileUpdate(ctx context.Context, file, baseDir string, data []byte) error {
+func (r *Reconciler) HandleFileUpdate(ctx context.Context, file, baseDir string, data []byte, force bool) error {
 	log := ctrl.LoggerFrom(ctx)
 
+	fp := filepath.Join(baseDir, file)
+
+	if !force {
+		// avoid overwritting the file if the contents already match
+		f, err := os.Open(fp)
+		if err == nil {
+			if equal, _ := utils.ReadersEqual(bytes.NewReader(data), f, 0); equal {
+				return nil
+			}
+		}
+		if f != nil {
+			_ = f.Close()
+		}
+	}
+
 	log.WithValues("file", file, "path", baseDir).Info("writting file")
-	if err := os.WriteFile(filepath.Join(baseDir, file), data, 0o644); err != nil {
+	if err := os.WriteFile(fp, data, 0o644); err != nil {
 		return err
 	}
 

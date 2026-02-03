@@ -169,10 +169,10 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 	if !ok {
 		var longestMatch string
 		// the path may point to a file in a watched folder
-		for n := range w.config {
-			if strings.HasPrefix(path, n) {
-				if len(n) > len(longestMatch) {
-					longestMatch = n
+		for p := range w.config {
+			if strings.HasPrefix(path, p) {
+				if len(p) > len(longestMatch) {
+					longestMatch = p
 				}
 				// TODO: should we run all matching configs or just the longest matching one?
 				// if err := w.do(ctx, n); err != nil {
@@ -193,9 +193,6 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 		}
 		err := utils.SignalProcess(ctx, cfg.ProcessName, sig)
 		w.log.Err(err).Str("operation", "reload").Str("path", path).Msgf("%s: %s", cfg.ProcessName, cfg.Signal)
-		if err != nil {
-			return err
-		}
 	}
 
 	if cfg.Name == "" && cfg.URL == "" {
@@ -211,12 +208,9 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 	// post the file contents to the configured URL
 	if cfg.URL != "" {
 		for _, payload := range data {
-			// TODO: set the bodyType from the file type?
+			// TODO: set the bodyType from the file type? Allow templating the URL with the fileName?
 			resp, err := w.http.Post(cfg.URL, "", payload)
 			w.log.Err(err).Str("operation", "post").Str("path", path).Msgf("%s: %s", cfg.URL, resp.Status)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

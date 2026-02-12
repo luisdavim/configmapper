@@ -1,4 +1,4 @@
-FROM golang:alpine3.22 as builder
+FROM golang:alpine3.23 as builder
 
 # deinitializing GOPATH as otherwise go modules don't work properly
 ENV GOPATH=""
@@ -14,7 +14,7 @@ COPY main.go ./
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /configmapper -trimpath -ldflags="-s -w -extldflags '-static'"
 
-FROM alpine:3.22
+FROM alpine:3.23
 
 COPY --from=builder /configmapper /
 ENTRYPOINT [ "/configmapper" ]

@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	URLMap  URLMap  `mapstructure:"urlMap,omitempty"`
+	S3Map   S3Map   `mapstructure:"s3Map,omitempty"`
 	FileMap FileMap `mapstructure:"fileMap,omitempty"`
 	Watcher Watcher `mapstructure:"watcher,omitempty"`
 }
@@ -31,6 +32,20 @@ type FileMapping struct {
 	// URL where to post the data from the watched file
 	URL string `mapstructure:"url,omitempty"`
 }
+
+type S3Map map[string]S3Mapping
+
+type S3Mapping struct {
+	BucketName string `mapstructure:"bucketName,omitempty"`
+	S3Endpoint string `mapstructure:"s3Endpoint,omitempty"`
+	// ResourceMapping can map a file in a bucket to a Kubernetes Secret or ConfigMap
+	// when the file changes the Kubernetes resource is updated with the file contentes
+	ResourceMapping `mapstructure:",squash"`
+	// Interval defines how often to poll the URL
+	Interval metav1.Duration `mapstructure:"interval"`
+}
+
+type ResourceMap map[string]ResourceMapping
 
 type ResourceMapping struct {
 	ResourceType string `mapstructure:"type,omitempty"`

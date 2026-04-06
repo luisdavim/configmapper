@@ -60,6 +60,10 @@ func New(cfg config.URLMap) (*Downloader, error) {
 			c.Namespace = curNS
 			d.config[u] = c
 		}
+		if c.ResourceType == "" {
+			c.ResourceType = "configmap"
+			d.config[u] = c
+		}
 		pu, err := url.Parse(u)
 		if err != nil {
 			return nil, err
@@ -68,10 +72,12 @@ func New(cfg config.URLMap) (*Downloader, error) {
 			c.Key = filepath.Base(pu.Path)
 			if c.Key == "." || c.Key == "/" {
 				c.Key = DefaultKey
+				d.config[u] = c
 			}
 		}
 		if c.Interval.Duration == 0 {
 			c.Interval.Duration = DefaultInterval
+			d.config[u] = c
 		}
 	}
 

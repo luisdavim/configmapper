@@ -21,6 +21,7 @@ import (
 	"github.com/luisdavim/configmapper/pkg/downloader"
 	"github.com/luisdavim/configmapper/pkg/filewatcher"
 	"github.com/luisdavim/configmapper/pkg/k8swatcher"
+	"github.com/luisdavim/configmapper/pkg/s3watcher"
 )
 
 func mustBindPFlag(key string, f *pflag.Flag) {
@@ -44,6 +45,10 @@ func New(cfg *config.Config) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			s3, err := s3watcher.New(cfg.S3Map)
+			if err != nil {
+				return err
+			}
 			signals := make(chan os.Signal, 1)
 			signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -56,12 +61,16 @@ func New(cfg *config.Config) *cobra.Command {
 				dnlr.Start(ctx)
 			}()
 			go func() {
+				s3.Start(ctx)
+			}()
+			go func() {
 				if err := k8swatcher.Start(ctx, cfg.Watcher); err != nil {
 					signals <- syscall.SIGABRT
 				}
 			}()
 			<-signals
 			dnlr.Stop()
+			s3.Stop()
 			cancel()
 			return err
 		},

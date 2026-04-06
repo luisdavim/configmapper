@@ -189,7 +189,7 @@ func (w *worker) download(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			defer res.Body.Close()
+			defer func() { _ = res.Body.Close() }()
 			buf := new(strings.Builder)
 			_, err = io.Copy(buf, res.Body)
 			w.log.Err(err).Str("bucket", w.bucketName).Str("path", *obj.Key).Msg("reading object")

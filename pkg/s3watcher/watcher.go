@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +30,7 @@ type worker struct {
 	k8s        client.Client
 	stop       chan struct{}
 	bucketName string
+	interval   time.Duration
 	files      config.ResourceMap
 }
 
@@ -46,12 +46,12 @@ func getConfigKey(cfg config.S3Mapping) string {
 	return filepath.Join(cfg.S3Endpoint, cfg.BucketName)
 }
 
-func newS3Client(ctx context.Context, endpoint string) *s3.Client {
+func newS3Client(ctx context.Context, endpoint string) (*s3.Client, error) {
 	// LoadDefaultConfig automatically reads AWS_ACCESS_KEY_ID,
 	// AWS_SECRET_ACCESS_KEY, and AWS_REGION from the environment.
 	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
+		return nil, fmt.Errorf("unable to load SDK config, %w", err)
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
@@ -63,7 +63,7 @@ func newS3Client(ctx context.Context, endpoint string) *s3.Client {
 		}
 	})
 
-	return client
+	return client, nil
 }
 
 func New(cfg config.S3Map) (*S3Watcher, error) {
@@ -99,13 +99,14 @@ func New(cfg config.S3Map) (*S3Watcher, error) {
 
 		if c.Interval.Duration == 0 {
 			c.Interval.Duration = DefaultInterval
+			w.config[file] = c
 		}
 	}
 
 	return w, nil
 }
 
-func (w *S3Watcher) Start(ctx context.Context) {
+func (w *S3Watcher) Start(ctx context.Context) error {
 	w.Lock()
 	defer w.Unlock()
 
@@ -117,10 +118,15 @@ func (w *S3Watcher) Start(ctx context.Context) {
 		key := getConfigKey(c)
 		wrk, ok := w.workers[key]
 		if !ok {
+			cli, err := newS3Client(ctx, c.S3Endpoint)
+			if err != nil {
+				return fmt.Errorf("failed to create S3 client: %w", err)
+			}
 			wrk = worker{
 				bucketName: c.BucketName,
-				client:     newS3Client(ctx, c.S3Endpoint),
+				client:     cli,
 				k8s:        w.k8s,
+				interval:   c.Interval.Duration,
 				stop:       make(chan struct{}),
 			}
 		}
@@ -129,8 +135,13 @@ func (w *S3Watcher) Start(ctx context.Context) {
 		}
 		wrk.files[f] = c.ResourceMapping
 		w.workers[key] = wrk
-		wrk.schedule(ctx, c.Interval.Duration)
 	}
+
+	for _, wrk := range w.workers {
+		wrk.schedule(ctx)
+	}
+
+	return nil
 }
 
 func (w *S3Watcher) Stop() {
@@ -145,11 +156,11 @@ func (w *S3Watcher) Stop() {
 	}
 }
 
-func (w *worker) schedule(ctx context.Context, interval time.Duration) {
+func (w *worker) schedule(ctx context.Context) {
 	go func() {
 		err := w.download(ctx)
 		w.log.Err(err).Str("bucket", w.bucketName).Msg("downloading")
-		ticker := time.NewTicker(interval)
+		ticker := time.NewTicker(w.interval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -169,7 +180,7 @@ func (w *worker) schedule(ctx context.Context, interval time.Duration) {
 
 func (w *worker) download(ctx context.Context) error {
 	for file, cfg := range w.files {
-		output, err := w.client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		output, err := w.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 			Bucket: aws.String(w.bucketName),
 			Prefix: &file,
 		})
@@ -189,9 +200,9 @@ func (w *worker) download(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			defer func() { _ = res.Body.Close() }()
 			buf := new(strings.Builder)
 			_, err = io.Copy(buf, res.Body)
+			_ = res.Body.Close()
 			w.log.Err(err).Str("bucket", w.bucketName).Str("path", *obj.Key).Msg("reading object")
 			if err != nil {
 				continue

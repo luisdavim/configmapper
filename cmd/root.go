@@ -53,7 +53,8 @@ func New(cfg *config.Config) *cobra.Command {
 			signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 			ctx, cancel := context.WithCancel(context.Background())
 			go func() {
-				if err = fw.Start(ctx); err != nil {
+				if err := fw.Start(ctx); err != nil {
+					cmd.PrintErrf("failed to start file watcher: %v", err)
 					signals <- syscall.SIGABRT
 				}
 			}()
@@ -61,17 +62,24 @@ func New(cfg *config.Config) *cobra.Command {
 				dnlr.Start(ctx)
 			}()
 			go func() {
-				s3.Start(ctx)
-			}()
-			go func() {
-				if err := k8swatcher.Start(ctx, cfg.Watcher); err != nil {
+				if err := s3.Start(ctx); err != nil {
+					cmd.PrintErrf("failed to start S3 watcher: %v", err)
 					signals <- syscall.SIGABRT
 				}
 			}()
-			<-signals
+			go func() {
+				if err := k8swatcher.Start(ctx, cfg.Watcher); err != nil {
+					cmd.PrintErrf("failed to start k8s watcher: %v", err)
+					signals <- syscall.SIGABRT
+				}
+			}()
+			s := <-signals
 			dnlr.Stop()
 			s3.Stop()
 			cancel()
+			if s == syscall.SIGABRT {
+				err = fmt.Errorf("aborted due to failures")
+			}
 			return err
 		},
 	}

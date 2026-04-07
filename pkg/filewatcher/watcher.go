@@ -3,7 +3,7 @@ package filewatcher
 import (
 	"context"
 	"fmt"
-	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,20 +127,17 @@ func getFilesFromPath(path string) ([]string, error) {
 		return []string{path}, nil
 	}
 
-	var files []string
-	err = filepath.WalkDir(path, func(p string, i fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if i.IsDir() {
-			// don't recurse into sub-folders
-			return filepath.SkipDir
-		}
-		files = append(files, p)
-		return nil
-	})
+	entries, err := os.ReadDir(path)
 	if err != nil {
-		return files, err
+		return nil, err
+	}
+
+	var files []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		files = append(files, filepath.Join(path, entry.Name()))
 	}
 
 	return files, nil
@@ -210,6 +207,12 @@ func (w *Watcher) do(ctx context.Context, path string) error {
 		for _, payload := range data {
 			// TODO: set the bodyType from the file type? Allow templating the URL with the fileName?
 			resp, err := w.http.Post(cfg.URL, "", payload)
+			if resp == nil {
+				resp = &http.Response{
+					Status:     http.StatusText(http.StatusInternalServerError),
+					StatusCode: http.StatusInternalServerError,
+				}
+			}
 			w.log.Err(err).Str("operation", "post").Str("path", path).Msgf("%s: %s", cfg.URL, resp.Status)
 		}
 	}

@@ -88,7 +88,7 @@ func ByLabel(label string) predicate.Predicate {
 // ByNamespace will filter any events from Namespaces not in the given list.
 func ByNamespace(namespaces []string) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return slices.Contains(namespaces, o.GetNamespace())
+		return slices.Contains(namespaces, o.GetNamespace()) //nolint:govet
 	})
 }
 

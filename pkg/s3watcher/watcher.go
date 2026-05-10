@@ -13,11 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/luisdavim/configmapper/pkg/config"
-	"github.com/luisdavim/configmapper/pkg/utils"
 	"github.com/rs/zerolog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	konfig "sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	"github.com/luisdavim/configmapper/pkg/config"
+	"github.com/luisdavim/configmapper/pkg/utils"
 )
 
 const (

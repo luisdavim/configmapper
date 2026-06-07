@@ -110,6 +110,7 @@ func (d *Downloader) Stop() {
 
 func (d *Downloader) schedule(ctx context.Context, url string) {
 	d.log.Info().Str("url", url).Msg("starting")
+	stopCh := d.stop[url]
 	go func() {
 		err := d.download(ctx, url)
 		d.log.Err(err).Str("url", url).Msgf("downloading")
@@ -123,7 +124,7 @@ func (d *Downloader) schedule(ctx context.Context, url string) {
 			case <-ctx.Done():
 				d.log.Info().Str("url", url).Msg("context canceled, stopping")
 				return
-			case <-d.stop[url]:
+			case <-stopCh:
 				d.log.Info().Str("url", url).Msg("got quit signal, stopping")
 				return
 			}

@@ -22,12 +22,12 @@ type SignalMapping struct {
 
 type FileMap map[string]FileMapping
 
-// FileMapping allows mappting filepaths to k8s resources, OS signals and/or URLs
+// FileMapping allows mapping filepaths to k8s resources, OS signals and/or URLs
 type FileMapping struct {
 	// ResourceMapping can map a file to a Kubernetes Secret or ConfigMap
-	// when the file changes the Kubernetes resource is updated with the file contentes
+	// when the file changes the Kubernetes resource is updated with the file contents
 	ResourceMapping `mapstructure:",squash"`
-	// SignalMapping can map a file to a process, when the file changes the process is sent the specied signal
+	// SignalMapping can map a file to a process, when the file changes the process is sent the specified signal
 	SignalMapping `mapstructure:",squash"`
 	// URL where to post the data from the watched file
 	URL string `mapstructure:"url,omitempty"`
@@ -39,7 +39,7 @@ type S3Mapping struct {
 	BucketName string `mapstructure:"bucketName,omitempty"`
 	S3Endpoint string `mapstructure:"s3Endpoint,omitempty"`
 	// ResourceMapping can map a file in a bucket to a Kubernetes Secret or ConfigMap
-	// when the file changes the Kubernetes resource is updated with the file contentes
+	// when the file changes the Kubernetes resource is updated with the file contents
 	ResourceMapping `mapstructure:",squash"`
 	// Interval defines how often to poll the URL
 	Interval metav1.Duration `mapstructure:"interval"`

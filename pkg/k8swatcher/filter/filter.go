@@ -47,7 +47,7 @@ func SkipAnnotation(annotation string) predicate.Predicate {
 	}
 }
 
-// ByLabel wiil exclude objects that don't have the required label
+// ByLabel will exclude objects that don't have the required label
 func ByLabel(label string) predicate.Predicate {
 	if label == "" {
 		return predicate.NewTypedPredicateFuncs(func(object client.Object) bool { return true })

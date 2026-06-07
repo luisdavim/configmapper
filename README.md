@@ -29,7 +29,7 @@ Note that, for the processes reloading functionality, you'll need to set [`share
 
 ## Configuration
 
-The tool can be configured using a `yaml` file nameed `configmapper.yaml`:
+The tool can be configured using a `yaml` file named `configmapper.yaml`:
 
 ```yaml
 # fileMap maps file paths to k8s ConfigMaps, Secrets or processes
@@ -76,7 +76,7 @@ watcher:
   defaultPath: "/tmp"
 ```
 
-The default path is the local filesystem path where files will be created from the observed `ConfigMaps` and `Secrets`, this can be overridden from each `ConfigMap` (or `Secret`) through an annotation, you can also use annotations to tell the tool to ignore specific resources or to ignore deletes, to kepp the generated file after the resource was deleted:
+The default path is the local filesystem path where files will be created from the observed `ConfigMaps` and `Secrets`, this can be overridden from each `ConfigMap` (or `Secret`) through an annotation, you can also use annotations to tell the tool to ignore specific resources or to ignore deletes, to keep the generated file after the resource was deleted:
 
 ```yaml
 metadata:
@@ -87,7 +87,7 @@ metadata:
 ```
 
 The watcher config can also be set, using environment variables, for example, `WATCHER_NAMESPACES` can be used to set the list of namespaces to watch.
-Environment variables are automatically mapped to the comandline flags and named after the config file paths.
+Environment variables are automatically mapped to the command-line flags and named after the config file paths.
 
 ## Usage
 
@@ -112,7 +112,7 @@ Flags:
 
 ### Share Process Namespace
 
-Too use the process reloading functionality, the Pod needs to be configured to [Share Process Namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) with `shareProcessNamespace: true`.
+To use the process reloading functionality, the Pod needs to be configured to [Share Process Namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) with `shareProcessNamespace: true`.
 
 ### Update delay
 
@@ -122,7 +122,7 @@ This is because the projected values of ConfigMaps and Secrets are not updated e
 
 ### Files mounted via `subPath` are never updated
 
-This is a long-standing Kubernetes issue: ConfigMaps and Secrets mounted as files with a `subPath` key do not get updated by the kubelet. See [issue #50345](https://github.com/kubernetes/kubernetes/issues/50345) on Github.
+This is a long-standing Kubernetes issue: ConfigMaps and Secrets mounted as files with a `subPath` key do not get updated by the kubelet. See [issue #50345](https://github.com/kubernetes/kubernetes/issues/50345) on GitHub.
 
 A possible workaround involves [mounting the Secret/ConfigMap without using subPath in a different folder and manually creating a symlink from an initContainer ahead of time to that folder](https://github.com/kubernetes/kubernetes/issues/50345#issuecomment-400647420), or if possible at all switching to not using `subPath`.
 Or use the `configmapper` to manage the files instead of mounting them directly.

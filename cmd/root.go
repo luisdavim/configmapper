@@ -96,11 +96,11 @@ func New(cfg *config.Config) *cobra.Command {
 	cmd.Flags().StringP("namespaces", "n", "", "Comma separated list of namespaces to watch (defaults to the Pod's namespace)")
 	mustBindPFlag("watcher.namespaces", cmd.Flags().Lookup("namespaces"))
 
-	cmd.Flags().StringP("label-selector", "l", "", "Label selector for configMaps and secrets")
+	cmd.Flags().StringP("label-selector", "l", "", "Label selector for ConfigMaps and Secrets")
 	mustBindPFlag("watcher.labelSelector", cmd.Flags().Lookup("label-selector"))
 
-	cmd.Flags().StringP("reuired-label", "r", "", "Required label for configMaps and secrets")
-	mustBindPFlag("watcher.requiredLabel", cmd.Flags().Lookup("reuired-label"))
+	cmd.Flags().StringP("required-label", "r", "", "Required label for ConfigMaps and Secrets")
+	mustBindPFlag("watcher.requiredLabel", cmd.Flags().Lookup("required-label"))
 
 	return cmd
 }

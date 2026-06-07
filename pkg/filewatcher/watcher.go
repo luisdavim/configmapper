@@ -87,8 +87,8 @@ func (w *Watcher) Start(ctx context.Context) error {
 			if event.Has(fsnotify.Chmod) {
 				continue
 			}
-			// k8s configmaps use symlinks, we need this workaround.
-			// original configmap file is removed
+			// k8s ConfigMaps use symlinks, we need this workaround.
+			// original ConfigMap file is removed
 			if event.Has(fsnotify.Remove) {
 				// remove the watch since the file is removed
 				if err := w.fw.Remove(event.Name); err != nil {
@@ -123,7 +123,7 @@ func getFilesFromPath(path string) ([]string, error) {
 	}
 
 	if !info.IsDir() {
-		// is path is a file, return it
+		// if path is a file, return it
 		return []string{path}, nil
 	}
 

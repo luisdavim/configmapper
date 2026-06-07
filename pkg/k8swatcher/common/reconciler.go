@@ -64,7 +64,7 @@ func (r *Reconciler) HandleFileUpdate(ctx context.Context, file, baseDir string,
 	fp := filepath.Join(baseDir, file)
 
 	if !force {
-		// avoid overwritting the file if the contents already match
+		// avoid overwriting the file if the contents already match
 		f, err := os.Open(fp)
 		if err == nil {
 			if equal, _ := utils.ReadersEqual(bytes.NewReader(data), f, 0); equal {
@@ -76,7 +76,7 @@ func (r *Reconciler) HandleFileUpdate(ctx context.Context, file, baseDir string,
 		}
 	}
 
-	log.WithValues("file", file, "path", baseDir).Info("writting file")
+	log.WithValues("file", file, "path", baseDir).Info("writing file")
 	if err := os.WriteFile(fp, data, 0o644); err != nil {
 		return err
 	}

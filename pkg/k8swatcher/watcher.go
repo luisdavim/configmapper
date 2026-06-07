@@ -1,4 +1,4 @@
-// configMapwatcher is a kubernetes controller that watches ConfigMap and Secret resources
+// k8swatcher is a kubernetes controller that watches ConfigMap and Secret resources
 package k8swatcher
 
 import (
@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	metrcisserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	// +kubebuilder:scaffold:imports
 )
@@ -63,7 +63,7 @@ func Start(ctx context.Context, cfg config.Watcher) error {
 	nss := strings.Split(cfg.Namespaces, ",")
 	ctrlOpts := ctrl.Options{
 		Scheme: scheme,
-		Metrics: metrcisserver.Options{
+		Metrics: metricsserver.Options{
 			BindAddress: ":8080",
 		},
 		HealthProbeBindAddress: ":8081",

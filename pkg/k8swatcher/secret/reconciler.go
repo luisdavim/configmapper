@@ -48,7 +48,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !secret.DeletionTimestamp.IsZero() {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
-			if err := r.cleanup(secret, baseDir); err != nil {
+			if err := r.cleanup(ctx, secret, baseDir); err != nil {
 				log.Error(err, "failed to cleanup")
 				return ctrl.Result{}, err
 			}
@@ -59,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if r.NeedsCleanUp(secret) {
 		// the skip annotation was added or changed from false to true
 		// or the required label was removed or set to false
-		return ctrl.Result{}, r.cleanup(secret, baseDir)
+		return ctrl.Result{}, r.cleanup(ctx, secret, baseDir)
 	}
 
 	if err := os.MkdirAll(baseDir, 0o700); err != nil {
@@ -89,7 +89,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: r.RequeueInterval}, nil
 }
 
-func (r *Reconciler) cleanup(secret *corev1.Secret, baseDir string) error {
+func (r *Reconciler) cleanup(ctx context.Context, secret *corev1.Secret, baseDir string) error {
 	var skip bool
 	if secret.Annotations != nil {
 		skip, _ = strconv.ParseBool(secret.Annotations[common.IgnoreDeleteAnnotation])
@@ -103,7 +103,7 @@ func (r *Reconciler) cleanup(secret *corev1.Secret, baseDir string) error {
 
 	// we won't be tracking this resource anymore
 	controllerutil.RemoveFinalizer(secret, common.FinalizerName)
-	if err := r.Update(context.Background(), secret); err != nil {
+	if err := r.Update(ctx, secret); err != nil {
 		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 

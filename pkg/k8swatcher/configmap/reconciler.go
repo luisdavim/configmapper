@@ -48,7 +48,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !configMap.DeletionTimestamp.IsZero() {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(configMap, common.FinalizerName) {
-			if err := r.cleanup(configMap, baseDir); err != nil {
+			if err := r.cleanup(ctx, configMap, baseDir); err != nil {
 				log.Error(err, "failed to cleanup")
 				return ctrl.Result{}, err
 			}
@@ -59,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if r.NeedsCleanUp(configMap) {
 		// the skip annotation was added or changed from false to true
 		// or the required label was removed or set to false
-		return ctrl.Result{}, r.cleanup(configMap, baseDir)
+		return ctrl.Result{}, r.cleanup(ctx, configMap, baseDir)
 	}
 
 	if !controllerutil.ContainsFinalizer(configMap, common.FinalizerName) {
@@ -94,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: r.RequeueInterval}, nil
 }
 
-func (r *Reconciler) cleanup(configMap *corev1.ConfigMap, baseDir string) error {
+func (r *Reconciler) cleanup(ctx context.Context, configMap *corev1.ConfigMap, baseDir string) error {
 	var skip bool
 	if configMap.Annotations != nil {
 		skip, _ = strconv.ParseBool(configMap.Annotations[common.IgnoreDeleteAnnotation])
@@ -111,7 +111,7 @@ func (r *Reconciler) cleanup(configMap *corev1.ConfigMap, baseDir string) error 
 
 	// we won't be tracking this resource anymore
 	controllerutil.RemoveFinalizer(configMap, common.FinalizerName)
-	if err := r.Update(context.Background(), configMap); err != nil {
+	if err := r.Update(ctx, configMap); err != nil {
 		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 

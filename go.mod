@@ -3,7 +3,7 @@ module github.com/luisdavim/configmapper
 go 1.26.2
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.41.12
+	github.com/aws/aws-sdk-go-v2 v1.42.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.23
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.103.2
 	github.com/fsnotify/fsnotify v1.10.1
